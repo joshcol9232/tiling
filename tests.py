@@ -4,25 +4,28 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 
 DELTA_SIGMA = 0.1   # Distance between lines of a set
+SIDE_LENGTH = 1
 
-def construction_line(x, j, k, sigma):
+# Calculate angle, sin and cos values between each set beforehand
+set_angles = [((j/5) * 2 * np.pi, np.sin((j/5) * 2 * np.pi), np.cos((j/5) * 2 * np.pi)) for j in range(5)]
+print(set_angles)
+
+def draw_construction_line(xspace, j, k, sigma, set_angles):
     """
     Function of the k'th grid line of set j, with normal offset sigma. 
     """
-    s = j * 2 * np.pi/5
-    return (k - sigma - x * np.cos(s))/np.sin(s)
-
+    # Special cases. E.g angle = 0
+    if set_angles[j][0] == 0:
+        plt.axvline(x=( (k - sigma)/set_angles[j][2] ))
+    else:
+        plt.plot(xspace, (k - sigma - xspace * set_angles[j][2])/set_angles[j][1])
 
 xspace = np.linspace(-7, 7)
 
 for j in range(5):
-    plt.plot( xspace, construction_line(xspace, j, 1, 0.1) )
+    # for k in range(10):
+    draw_construction_line(xspace, j, 1, 0.1, set_angles)
+
 
 
 plt.show()
-
-# plt.axes()
-# line = plt.Line2D((0.5, 10), (1, 20), lw=1.5)
-# plt.gca().add_line(line)
-# plt.axis("scaled")
-# plt.show()

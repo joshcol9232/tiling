@@ -4,9 +4,13 @@ Tool for generating various quasi-crystalline patterns in 2D and 3D (perhaps 4D 
 ## Aims:
 
 To provide capability to generate arbitrary tiling data using the de Bruijn grid method in:
-    - 2D (Done?: No)
-    - 3D (Done?: No)
-    - 4D (Done?: No)
+
+- 2D (Done?: No)
+
+- 3D (Done?: No)
+
+- 4D (Done?: No)
+
 
 ## Plan:
 
