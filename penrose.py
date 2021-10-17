@@ -73,7 +73,6 @@ class Intersection:
         # The indices of the spaces surrounding the points are then (for j1 = 0, j2 = 1):
         # [k1 + 1 or 0, k2 + 1 or 0, point_indices...]
         # There should be 4 total
-        # NOTE: DOESN'T WORK WITH DIFFERENT SYMMETRY YET
         # had to copy each member of point_indices due to it just putting the array in by reference each time
         surrounding_indices = np.array([np.array([point_indices[j] for j in range(len(point_indices))]) for i in range(4)])
         # Do each permutation
@@ -84,7 +83,7 @@ class Intersection:
         return surrounding_indices
 
 
-def vertex_position_from_indices(indices, es):
+def vertex_position_from_pentagrid(indices, es):
     """
     Calculates vertex positions in real space from pentagrid indices.
     """
@@ -104,10 +103,9 @@ Plan:
 # Define normal unit vectors for each of the sets. Normal to the lines so: angle + pi/2. Required for finding indices
 es = [np.array([ np.cos( (j * 2 * np.pi/5) + ANGLE_OFFSET + np.pi/2.0 ), np.sin( (j * 2 * np.pi/5) + ANGLE_OFFSET + np.pi/2 ) ]) for j in range(5)]
 
-xspace = np.linspace(-25, 25)
 rng = np.random.default_rng(32187)
 
-K_RANGE = 10
+K_RANGE = 1
 J_RANGE = 5
 
 sigmas = np.zeros(5)
@@ -128,8 +126,17 @@ y_intersections = []
 intersections = []
 
 
-for j1 in range(J_RANGE):
-    for j2 in range(j1 + 1, J_RANGE):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
+# for j1 in range(J_RANGE):
+#     for j2 in range(j1 + 1, J_RANGE):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
+#         for k1 in range(K_RANGE):
+#             for k2 in range(K_RANGE):   # Go through each line of the set j2
+#                 intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
+#                 intersections.append(intersection)
+#                 x_intersections.append(intersection.r[0])
+#                 y_intersections.append(intersection.r[1])
+
+for j1 in range(2):
+    for j2 in range(j1 + 1, 2):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
         for k1 in range(K_RANGE):
             for k2 in range(K_RANGE):   # Go through each line of the set j2
                 intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
@@ -143,21 +150,18 @@ print("Intersections:", intersections[0].find_surrounding_indices(sigmas, es))
 indices = [i.find_surrounding_indices(sigmas, es) for i in intersections]
 print(indices)
 
-
 vertices = []
-
-for indices_set in indices: # indices array holds array of indices related to each intersection of lines. 
-    for index in indices_set:
-        vertices.append( vertex_position_from_indices(index, es) )
+for indices_set in indices:
+    for i in indices_set:
+        vertices.append( vertex_position_from_pentagrid(i, es) )
 
 print(vertices)
 
-x = []
+x= []
 y = []
 for v in vertices:
     x.append(v[0])
     y.append(v[1])
 
 plt.plot(x, y, ".")
-
 plt.show()
