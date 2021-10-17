@@ -75,13 +75,24 @@ class Intersection:
         # There should be 4 total
         # NOTE: DOESN'T WORK WITH DIFFERENT SYMMETRY YET
         # had to copy each member of point_indices due to it just putting the array in by reference each time
-        surrounding_indices = [[point_indices[j] for j in range(len(point_indices))] for i in range(4)]
+        surrounding_indices = np.array([np.array([point_indices[j] for j in range(len(point_indices))]) for i in range(4)])
         # Do each permutation
         surrounding_indices[1][self.j1] += 1
         surrounding_indices[2][self.j2] += 1
         surrounding_indices[3][self.j1] += 1
         surrounding_indices[3][self.j2] += 1
         return surrounding_indices
+
+
+def vertex_position_from_indices(indices, es):
+    """
+    Calculates vertex positions in real space from pentagrid indices.
+    """
+    vertex = np.zeros(2)    # vector in 2D space
+    for i in range(len(indices)):
+        vertex += es[i] * indices[i]
+
+    return vertex
 
 """
 Plan:
@@ -133,4 +144,20 @@ indices = [i.find_surrounding_indices(sigmas, es) for i in intersections]
 print(indices)
 
 
+vertices = []
 
+for indices_set in indices: # indices array holds array of indices related to each intersection of lines. 
+    for index in indices_set:
+        vertices.append( vertex_position_from_indices(index, es) )
+
+print(vertices)
+
+x = []
+y = []
+for v in vertices:
+    x.append(v[0])
+    y.append(v[1])
+
+plt.plot(x, y, ".")
+
+plt.show()
