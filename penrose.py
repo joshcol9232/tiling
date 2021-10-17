@@ -23,10 +23,11 @@ def get_indices(r, sigmas, es, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
     indices = np.zeros(5, dtype=int)
     i = 0
     for e in es:
-        indices[i] = int(np.floor(np.dot(r, e) + sigmas[i]))
+        indices[i] = int(np.ceil(np.dot(r, e) + sigmas[i]))
         i += 1
 
     return indices
+
 
 
 class Intersection:
@@ -34,7 +35,7 @@ class Intersection:
     Takes r vector position, and the j and k values of the lines that intersect each other
     """
     def __init__(self, j1, k1, j2, k2, sigma1, sigma2, symmetry=SYMMETRY):  # Init calculates the intersection from given params
-        self.r, self.rhomb_type = self.find_intersection(j1, k1, j2, k2, sigma1, sigma2, symmetry)
+        self.r = self.find_intersection(j1, k1, j2, k2, sigma1, sigma2, symmetry)
         self.j1 = j1
         self.j2 = j2
         self.k1 = k1
@@ -47,19 +48,14 @@ class Intersection:
 
     def find_intersection(self, j1, k1, j2, k2, sigma1, sigma2, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
         """
-        Returns position vector of intersection between line j1,k1 and j2,k2, along with the rhombus type.
-        rhomb_type is stored as "thin" or "thick", where the name corresponds to the thin/thick rhombus respectively.
+        Returns position vector of intersection between line j1,k1 and j2,k2
         """
         a1 = (j1 * 2.0 * np.pi/symmetry) + angle_offset
         a2 = (j2 * 2.0 * np.pi/symmetry) + angle_offset
-        angle_diff_index = ((a2 - a1) % np.pi)/np.pi
-        rhomb_type = "thin"
-        if angle_diff_index == 0.6 or angle_diff_index == 0.4:  # 0.6 and 0.4 are equivalent and both thick
-            rhomb_type = "thick"
 
         x = ( (k1 - sigma1)/np.sin(a1) - (k2 - sigma2)/np.sin(a2) ) / ( (1.0/np.tan(a1)) - (1.0/np.tan(a2)) )
 
-        return np.array([x, construction_line(x, j1, k1, sigma1, symmetry=SYMMETRY)]), rhomb_type
+        return np.array([x, construction_line(x, j1, k1, sigma1, symmetry=SYMMETRY)])
 
     def find_surrounding_indices(self, sigmas, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
         """
@@ -104,15 +100,15 @@ Plan:
 # Define normal unit vectors for each of the sets. Required for finding indices
 es = [np.array([ np.cos( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ) ]) for j in range(SYMMETRY)]
 
-rng = np.random.default_rng(32187)
+# rng = np.random.default_rng(32187)
 
-K_RANGE = 1
+K_RANGE = 30
 
-sigmas = np.zeros(SYMMETRY)
-
-for j in range(SYMMETRY):
-    offset = 1 + rng.random() * 2
-    sigmas[j] = offset
+# sigmas = np.zeros(SYMMETRY)
+sigmas = np.array([0.2, 0.4, 0.3, -0.8, -0.1])   # Sum of sigmas must be = 0
+# for j in range(SYMMETRY):
+    # offset = 1 + rng.random() * 2
+    # sigmas[j] = offset
     # for k in range(K_RANGE):
     #     plt.plot(xspace, construction_line(xspace, j, k, offset), color=["r", "g", "b", "m", "y"][j])
 
@@ -125,8 +121,6 @@ x_intersections = []
 y_intersections = []
 intersections = []
 
-
-
 for j1 in range(SYMMETRY):
     for j2 in range(j1 + 1, SYMMETRY):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
         for k1 in range(K_RANGE):
@@ -136,14 +130,36 @@ for j1 in range(SYMMETRY):
                 x_intersections.append(intersection.r[0])
                 y_intersections.append(intersection.r[1])
 
+
+# ----------------- FOR EXPERIMENTING WITH 1 ONLY -----------
+# j1 = 0
+# k1 = 0
+# for j2 in range(SYMMETRY):
+#     if j2 != j1:
+#         for k2 in range(K_RANGE):
+#             intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
+#             intersections.append(intersection)
+#             x_intersections.append(intersection.r[0])
+#             y_intersections.append(intersection.r[1])
+# ------------------------------------------------
+
+plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
+
 # plt.plot(x_intersections, y_intersections, "xr")
 
 indices = [i.find_surrounding_indices(sigmas, es) for i in intersections]
 
+
+
+
 vertices = []
 for indices_set in indices:
     for i in indices_set:
-        vertices.append( vertex_position_from_pentagrid(i, es) )
+        # NOTE: The vertex only exists in the tiling if the sum of the indices is < 5 and > 0.
+        # http://www.neverendingbooks.org/de-bruijns-pentagrids
+        if np.sum(i) in [1, 2, 3 ,4]:
+            v = vertex_position_from_pentagrid(i, es)
+            vertices.append( v )
 
 
 x= []
@@ -152,5 +168,8 @@ for v in vertices:
     x.append(v[0])
     y.append(v[1])
 
+
 plt.plot(x, y, ".")
+plt.xlim(-10, 10)
+plt.ylim(-10, 10)
 plt.show()
