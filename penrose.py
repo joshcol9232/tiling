@@ -100,8 +100,8 @@ Plan:
 3) Use those indices in de Bruijn's formula to find the vertices in 2D space.
 """
 
-# Define normal unit vectors for each of the sets. Normal to the lines so: angle + pi/2. Required for finding indices
-es = [np.array([ np.cos( (j * 2 * np.pi/5) + ANGLE_OFFSET + np.pi/2.0 ), np.sin( (j * 2 * np.pi/5) + ANGLE_OFFSET + np.pi/2 ) ]) for j in range(5)]
+# Define normal unit vectors for each of the sets. Required for finding indices
+es = [np.array([ np.cos( (j * 2 * np.pi/5) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/5) + ANGLE_OFFSET ) ]) for j in range(5)]
 
 rng = np.random.default_rng(32187)
 
@@ -135,8 +135,8 @@ intersections = []
 #                 x_intersections.append(intersection.r[0])
 #                 y_intersections.append(intersection.r[1])
 
-for j1 in range(2):
-    for j2 in range(j1 + 1, 2):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
+for j1 in range(3):
+    for j2 in range(j1 + 1, 3):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
         for k1 in range(K_RANGE):
             for k2 in range(K_RANGE):   # Go through each line of the set j2
                 intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
