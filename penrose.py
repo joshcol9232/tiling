@@ -90,6 +90,22 @@ def vertex_position_from_pentagrid(indices, es):
 
     return vertex
 
+def generate_sigma(symmetry=SYMMETRY):
+    """
+    Generates offsets of each set of lines.
+    These offsets must sum to 0.
+    """
+    sigma = []
+    rng = np.random.default_rng(32187)
+    for i in range(symmetry-1):
+        sigma.append(rng.random())
+    # Sum of all sigma needs to equal 0
+    s = np.sum(np.array(sigma))
+    sigma.append(-s)
+    return np.array(sigma)
+
+
+
 """
 Plan:
 1) Find intersections of line with another
@@ -100,19 +116,11 @@ Plan:
 # Define normal unit vectors for each of the sets. Required for finding indices
 es = [np.array([ np.cos( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ) ]) for j in range(SYMMETRY)]
 
-# rng = np.random.default_rng(32187)
 
 K_RANGE = 30
 
-# sigmas = np.zeros(SYMMETRY)
-sigmas = np.array([0.2, 0.4, 0.3, -0.8, -0.1])   # Sum of sigmas must be = 0
-# for j in range(SYMMETRY):
-    # offset = 1 + rng.random() * 2
-    # sigmas[j] = offset
-    # for k in range(K_RANGE):
-    #     plt.plot(xspace, construction_line(xspace, j, k, offset), color=["r", "g", "b", "m", "y"][j])
+sigmas = generate_sigma()
 
-plt.legend()
 
 # Just find intersections along one line for now
 # Let's choose j1 = 1, k1 = 1 and compare that with every other line
