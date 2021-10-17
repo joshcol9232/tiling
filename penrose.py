@@ -27,7 +27,6 @@ class Intersection:
         """
         a1 = (j1 * 2.0 * np.pi/symmetry) + angle_offset
         a2 = (j2 * 2.0 * np.pi/symmetry) + angle_offset
-        print("Angles: ", a1, a2)
         x = ( (k1 - sigma1)/np.sin(a1) - (k2 - sigma2)/np.sin(a2) ) / ( (1.0/np.tan(a1)) - (1.0/np.tan(a2)) )
         return np.array([x, construction_line(x, j1, k1, sigma1, symmetry=5)])
 
@@ -53,13 +52,15 @@ J_RANGE = 5
 
 sigmas = []
 
+j1 = 4
+k1 = 1
 
 for j in range(J_RANGE):
     offset = 1 + rng.random() * 2
     sigmas.append(offset)
     for k in range(K_RANGE):
         linestyle = "-"
-        if j == 1 and k == 1:
+        if j == j1 and k == k1:
             linestyle = "--"
 
         plt.plot(xspace, construction_line(xspace, j, k, offset), linestyle)
@@ -71,13 +72,17 @@ plt.legend()
 x_intersections = []
 y_intersections = []
 
-for j2 in range(J_RANGE):   
-    if j2 != 1: # every set apart from set j1 = 1
-        for k2 in range(K_RANGE):   # Go through each line of the set j2
-            intersection = Intersection(1, 1, j2, k2, sigmas[1], sigmas[j2])
-            print(intersection)
-            x_intersections.append(intersection.r[0])
-            y_intersections.append(intersection.r[1])
+
+for j1 in range(J_RANGE):
+    for j2 in range(J_RANGE):
+        print("Comparing", j1, j2)
+        if j2 != j1:
+            for k1 in range(K_RANGE):
+                for k2 in range(K_RANGE):   # Go through each line of the set j2
+                    intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
+                    print(intersection)
+                    x_intersections.append(intersection.r[0])
+                    y_intersections.append(intersection.r[1])
 
 plt.plot(x_intersections, y_intersections, "xr")
 plt.show()
