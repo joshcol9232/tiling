@@ -4,13 +4,14 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 
 ANGLE_OFFSET = np.pi/2.0
+SYMMETRY = 5
 
-def construction_line(x, j, k, sigma, symmetry=5, angle_offset=ANGLE_OFFSET):
+def construction_line(x, j, k, sigma, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
     angle = (j * 2.0 * np.pi/symmetry) + angle_offset
     return (k - sigma - x * np.cos(angle)) / np.sin(angle)
 
 
-def get_indices(r, sigmas, es, symmetry=5, angle_offset=ANGLE_OFFSET):
+def get_indices(r, sigmas, es, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
     """
     Returns the indices for any point on the plane.
     [a j0, b j1, c j2, d j3, e j4] where a,b,c,d,e are integers.
@@ -32,7 +33,7 @@ class Intersection:
     """
     Takes r vector position, and the j and k values of the lines that intersect each other
     """
-    def __init__(self, j1, k1, j2, k2, sigma1, sigma2, symmetry=5):  # Init calculates the intersection from given params
+    def __init__(self, j1, k1, j2, k2, sigma1, sigma2, symmetry=SYMMETRY):  # Init calculates the intersection from given params
         self.r, self.rhomb_type = self.find_intersection(j1, k1, j2, k2, sigma1, sigma2, symmetry)
         self.j1 = j1
         self.j2 = j2
@@ -44,7 +45,7 @@ class Intersection:
     def __repr__(self):
         return "%s" % self.r
 
-    def find_intersection(self, j1, k1, j2, k2, sigma1, sigma2, symmetry=5, angle_offset=ANGLE_OFFSET):
+    def find_intersection(self, j1, k1, j2, k2, sigma1, sigma2, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
         """
         Returns position vector of intersection between line j1,k1 and j2,k2, along with the rhombus type.
         rhomb_type is stored as "thin" or "thick", where the name corresponds to the thin/thick rhombus respectively.
@@ -58,9 +59,9 @@ class Intersection:
 
         x = ( (k1 - sigma1)/np.sin(a1) - (k2 - sigma2)/np.sin(a2) ) / ( (1.0/np.tan(a1)) - (1.0/np.tan(a2)) )
 
-        return np.array([x, construction_line(x, j1, k1, sigma1, symmetry=5)]), rhomb_type
+        return np.array([x, construction_line(x, j1, k1, sigma1, symmetry=SYMMETRY)]), rhomb_type
 
-    def find_surrounding_indices(self, sigmas, symmetry=5, angle_offset=ANGLE_OFFSET):
+    def find_surrounding_indices(self, sigmas, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
         """
         Finds the indices for the spaces surrounding this intersection.
         Each intersection will be the corner between 4 spaces. Those 4 spaces will be either side
@@ -101,16 +102,15 @@ Plan:
 """
 
 # Define normal unit vectors for each of the sets. Required for finding indices
-es = [np.array([ np.cos( (j * 2 * np.pi/5) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/5) + ANGLE_OFFSET ) ]) for j in range(5)]
+es = [np.array([ np.cos( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ) ]) for j in range(SYMMETRY)]
 
 rng = np.random.default_rng(32187)
 
 K_RANGE = 1
-J_RANGE = 5
 
-sigmas = np.zeros(5)
+sigmas = np.zeros(SYMMETRY)
 
-for j in range(J_RANGE):
+for j in range(SYMMETRY):
     offset = 1 + rng.random() * 2
     sigmas[j] = offset
     # for k in range(K_RANGE):
@@ -126,17 +126,9 @@ y_intersections = []
 intersections = []
 
 
-# for j1 in range(J_RANGE):
-#     for j2 in range(j1 + 1, J_RANGE):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
-#         for k1 in range(K_RANGE):
-#             for k2 in range(K_RANGE):   # Go through each line of the set j2
-#                 intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
-#                 intersections.append(intersection)
-#                 x_intersections.append(intersection.r[0])
-#                 y_intersections.append(intersection.r[1])
 
-for j1 in range(3):
-    for j2 in range(j1 + 1, 3):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
+for j1 in range(SYMMETRY):
+    for j2 in range(j1 + 1, SYMMETRY):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
         for k1 in range(K_RANGE):
             for k2 in range(K_RANGE):   # Go through each line of the set j2
                 intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
@@ -146,16 +138,13 @@ for j1 in range(3):
 
 # plt.plot(x_intersections, y_intersections, "xr")
 
-print("Intersections:", intersections[0].find_surrounding_indices(sigmas, es))
 indices = [i.find_surrounding_indices(sigmas, es) for i in intersections]
-print(indices)
 
 vertices = []
 for indices_set in indices:
     for i in indices_set:
         vertices.append( vertex_position_from_pentagrid(i, es) )
 
-print(vertices)
 
 x= []
 y = []
