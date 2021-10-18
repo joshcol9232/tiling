@@ -1,6 +1,17 @@
 # tiling
 Tool for generating various quasi-crystalline patterns in 2D and 3D (perhaps 4D soon).
 
+## Aims:
+
+To provide capability to generate arbitrary tiling data using the de Bruijn grid method in:
+
+- 2D (Done?: No)
+
+- 3D (Done?: No)
+
+- 4D (Done?: No)
+
+
 ## Plan:
 
 Create a python module that generates the required data to form the aperiodic tilings along with their decoration (e.g filled tiles, filled volumes etc). Just a black box that you put a request into, and it gives you graph data out. More powerful/useful as it can just be used as a standalone python module.
