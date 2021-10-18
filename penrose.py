@@ -2,11 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
-from scipy.spatial import ConvexHull
+import time
 
-ANGLE_OFFSET = np.pi/2.0
-SYMMETRY = 5
-K_RANGE = 50    # In both directions
+SYMMETRY = int(5)
+ANGLE_OFFSET = np.pi/2
+K_RANGE = 10    # In both directions
+USE_RANDOM_SIGMA = True
 
 def construction_line(x, j, k, sigma, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
     angle = (j * 2.0 * np.pi/symmetry) + angle_offset
@@ -22,7 +23,7 @@ def get_indices(r, sigmas, es, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
     
     # Dot product with the unit vector will return the index without the original sigma shift, so then add the shift.
     # Note that since k is an integer, the distance between the lines is just 1 so it is already normalised.
-    indices = np.zeros(5, dtype=int)
+    indices = np.zeros(int(symmetry), dtype=int)
     i = 0
     for e in es:
         indices[i] = int(np.ceil(np.dot(r, e) + sigmas[i]))
@@ -59,14 +60,14 @@ class Intersection:
 
         return np.array([x, construction_line(x, j1, k1, sigma1, symmetry=SYMMETRY)])
 
-    def find_surrounding_indices(self, sigmas, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
+    def find_surrounding_indices(self, sigmas, es, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
         """
         Finds the indices for the spaces surrounding this intersection.
         Each intersection will be the corner between 4 spaces. Those 4 spaces will be either side
         of the two lines that intersected.
         """
         # Get indices that the point is located at
-        point_indices = get_indices(self.r, sigmas, symmetry, angle_offset)
+        point_indices = get_indices(self.r, sigmas, es, symmetry, angle_offset)
         point_indices[self.j1] = self.k1  # These are already known
         point_indices[self.j2] = self.k2
         # The indices of the spaces surrounding the points are then (for j1 = 0, j2 = 1):
@@ -92,13 +93,16 @@ def vertex_position_from_pentagrid(indices, es):
 
     return vertex
 
-def generate_sigma(symmetry=SYMMETRY):
+def generate_sigma(symmetry=SYMMETRY, random=USE_RANDOM_SIGMA):
     """
     Generates offsets of each set of lines.
     These offsets must sum to 0.
     """
     sigma = []
     rng = np.random.default_rng(32187)
+    if random:
+        rng = np.random.default_rng(int(time.time()))
+
     for i in range(symmetry-1):
         sigma.append(rng.random())
     # Sum of all sigma needs to equal 0
@@ -126,8 +130,8 @@ def ccw_sort(v):
 es = [np.array([ np.cos( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ) ]) for j in range(SYMMETRY)]
 
 
-# sigmas = generate_sigma()
-sigmas = np.array([0.2, 0.4, 0.3, -0.8, -0.1])
+sigmas = generate_sigma()
+# sigmas = np.array([0.2, 0.4, 0.3, -0.8, -0.1])
 
 # Just find intersections along one line for now
 # Let's choose j1 = 1, k1 = 1 and compare that with every other line
@@ -163,7 +167,7 @@ plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
 xspace = np.linspace(-10, 10)
 for j in range(SYMMETRY):
     for k in range(-K_RANGE, K_RANGE):
-        plt.plot(xspace, construction_line(xspace, j, k, sigmas[j]), color=["r", "g", "b", "y", "m"][j])
+        plt.plot(xspace, construction_line(xspace, j, k, sigmas[j]))#, color=["r", "g", "b", "y", "m"][j])
 
 plt.plot(x_intersections, y_intersections, "xr")
 plt.show()
@@ -185,7 +189,7 @@ for indices_set in indices:
 
 
 fig, ax = plt.subplots(1, figsize=(5, 5), dpi=200)
-ax.axis = "equal"
+ax.axis("equal")
 shapes = []
 
 
