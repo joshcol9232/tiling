@@ -2,9 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
+from scipy.spatial import ConvexHull
 
 ANGLE_OFFSET = np.pi/2.0
 SYMMETRY = 5
+K_RANGE = 50    # In both directions
 
 def construction_line(x, j, k, sigma, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
     angle = (j * 2.0 * np.pi/symmetry) + angle_offset
@@ -104,23 +106,28 @@ def generate_sigma(symmetry=SYMMETRY):
     sigma.append(-s)
     return np.array(sigma)
 
+def ccw_sort(v):
+    """
+    Make sorting function to make sure the polygons draw properly.
+    Sorts the points in clockwise order (like a radar)
+    """
+    mean = np.mean(v, axis=0)
+    d = v - mean    # Difference from mean
+    s = np.arctan2(d[:,0], d[:,1])
+    v_new = []
+    for a in np.argsort(s):
+        v_new.append(v[a])
+
+    return np.array(v_new)
 
 
-"""
-Plan:
-1) Find intersections of line with another
-2) Calculate what indices this line is by finding the neighbouring lines to that point.
-3) Use those indices in de Bruijn's formula to find the vertices in 2D space.
-"""
 
 # Define normal unit vectors for each of the sets. Required for finding indices
 es = [np.array([ np.cos( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ) ]) for j in range(SYMMETRY)]
 
 
-K_RANGE = 30
-
-sigmas = generate_sigma()
-
+# sigmas = generate_sigma()
+sigmas = np.array([0.2, 0.4, 0.3, -0.8, -0.1])
 
 # Just find intersections along one line for now
 # Let's choose j1 = 1, k1 = 1 and compare that with every other line
@@ -131,13 +138,12 @@ intersections = []
 
 for j1 in range(SYMMETRY):
     for j2 in range(j1 + 1, SYMMETRY):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
-        for k1 in range(K_RANGE):
-            for k2 in range(K_RANGE):   # Go through each line of the set j2
+        for k1 in range(-K_RANGE, K_RANGE):
+            for k2 in range(-K_RANGE, K_RANGE):   # Go through each line of the set j2
                 intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
                 intersections.append(intersection)
                 x_intersections.append(intersection.r[0])
                 y_intersections.append(intersection.r[1])
-
 
 # ----------------- FOR EXPERIMENTING WITH 1 ONLY -----------
 # j1 = 0
@@ -153,31 +159,44 @@ for j1 in range(SYMMETRY):
 
 plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
 
-# plt.plot(x_intersections, y_intersections, "xr")
+# Plot construction lines to check beforehand
+xspace = np.linspace(-10, 10)
+for j in range(SYMMETRY):
+    for k in range(-K_RANGE, K_RANGE):
+        plt.plot(xspace, construction_line(xspace, j, k, sigmas[j]), color=["r", "g", "b", "y", "m"][j])
+
+plt.plot(x_intersections, y_intersections, "xr")
+plt.show()
 
 indices = [i.find_surrounding_indices(sigmas, es) for i in intersections]
 
 
-
-
 vertices = []
 for indices_set in indices:
+    vset = []
     for i in indices_set:
         # NOTE: The vertex only exists in the tiling if the sum of the indices is < 5 and > 0.
         # http://www.neverendingbooks.org/de-bruijns-pentagrids
         if np.sum(i) in [1, 2, 3 ,4]:
             v = vertex_position_from_pentagrid(i, es)
-            vertices.append( v )
+            vset.append( v )
+
+    vertices.append(vset)
 
 
-x= []
-y = []
-for v in vertices:
-    x.append(v[0])
-    y.append(v[1])
+fig, ax = plt.subplots(1, figsize=(5, 5), dpi=200)
+ax.axis = "equal"
+shapes = []
 
 
-plt.plot(x, y, ".")
-plt.xlim(-10, 10)
-plt.ylim(-10, 10)
+for vertex_set in vertices:
+    v = ccw_sort(vertex_set)    # Sort vertices in draw order
+    shapes.append(Polygon(v, True))
+
+shape_coll = PatchCollection(shapes, alpha=0.4, edgecolor="k")
+ax.add_collection(shape_coll)
+
+
+plt.xlim(-15, 15)
+plt.ylim(-15, 15)
 plt.show()
