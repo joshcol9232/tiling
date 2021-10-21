@@ -4,9 +4,9 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import time
 
-SYMMETRY = int(6)
+SYMMETRY = int(3)
 ANGLE_OFFSET = np.pi/6
-K_RANGE = 20   # In both directions
+K_RANGE = 50   # In both directions
 USE_RANDOM_SIGMA = True
 
 def construction_line(x, j, k, sigma, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
@@ -113,7 +113,7 @@ def generate_sigma(symmetry=SYMMETRY, random=USE_RANDOM_SIGMA):
 def ccw_sort(v):
     """
     Make sorting function to make sure the polygons draw properly.
-    Sorts the points in counter-clockwise order (like a radar)
+    Sorts the points in clockwise order (like a radar)
     """
     mean = np.mean(v, axis=0)
     d = v - mean    # Difference from mean
@@ -150,17 +150,15 @@ for j1 in range(SYMMETRY):
                 y_intersections.append(intersection.r[1])
 
 # ----------------- FOR EXPERIMENTING WITH 1 ONLY -----------
-"""
-j1 = 0
-k1 = 0
-for j2 in range(SYMMETRY):
-    if j2 != j1:
-        for k2 in range(K_RANGE):
-            intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
-            intersections.append(intersection)
-            x_intersections.append(intersection.r[0])
-            y_intersections.append(intersection.r[1])
-"""
+# j1 = 0
+# k1 = 0
+# for j2 in range(SYMMETRY):
+#     if j2 != j1:
+#         for k2 in range(K_RANGE):
+#             intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
+#             intersections.append(intersection)
+#             x_intersections.append(intersection.r[0])
+#             y_intersections.append(intersection.r[1])
 # ------------------------------------------------
 
 plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
@@ -182,14 +180,12 @@ for indices_set in indices:
     vset = []
     for i in indices_set:
         # NOTE: The vertex only exists in the tiling if the sum of the indices is < 5 and > 0.
-        # http://www.neverendingbooks.org/de-bruijns-pentagrid
-        # print("Sum:", np.sum(i))
-        if np.sum(i) in [j for j in range(0, SYMMETRY+1)]:
+        # http://www.neverendingbooks.org/de-bruijns-pentagrids
+        if np.sum(i) in [i for i in range(1, SYMMETRY+1)]:
             v = vertex_position_from_pentagrid(i, es)
             vset.append( v )
 
-    if vset:    # If the vertex set is not empty, append it to the list of vertices
-        vertices.append(vset)
+    vertices.append(vset)
 
 
 
@@ -197,7 +193,6 @@ fig, ax = plt.subplots(1, figsize=(5, 5), dpi=200)
 ax.axis("equal")
 
 """ FOR PLOTTING SHAPES
-"""
 
 shapes = []
 for vertex_set in vertices:
@@ -206,9 +201,11 @@ for vertex_set in vertices:
 
 shape_coll = PatchCollection(shapes, alpha=0.4, edgecolor="k")
 ax.add_collection(shape_coll)
+"""
 
 
 """ FOR DRAWING THE VERTICES ONLY
+"""
 x = []
 y = []
 for vertex_set in vertices:
@@ -218,7 +215,6 @@ for vertex_set in vertices:
         y.append(v[1])
 
 plt.plot(x, y, ".")
-"""
 
 
 plotrange = 30
