@@ -4,11 +4,16 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import time
 
-SYMMETRY = int(5)
-ANGLE_OFFSET = np.pi/6
-K_RANGE = 10   # In both directions
+SYMMETRY = 6
+ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
+K_RANGE = 20   # In both directions
 USE_RANDOM_SIGMA = True
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
+PLOT_CONSTRUCTION = False       # Plot construction lines beforehand? (Useful for debugging)
+
+COS_ANGLE_OFF_INV = np.cos(-ANGLE_OFFSET)
+SIN_ANGLE_OFF_INV = np.sin(-ANGLE_OFFSET)
+ANGLE_OFF_ROT_MAT_INV = np.array([[COS_ANGLE_OFF_INV, -SIN_ANGLE_OFF_INV], [SIN_ANGLE_OFF_INV, COS_ANGLE_OFF_INV]])
 
 def construction_line(x, j, k, sigma, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
     angle = (j * 2.0 * np.pi/symmetry) + angle_offset
@@ -28,9 +33,12 @@ def get_indices(r, sigmas, es, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
     i = 0
     for e in es:
         indices[i] = int(np.ceil(np.dot(r, e) + sigmas[i]))
+
         i += 1
 
     return indices
+
+
 
 def colour_palette(angle):
     """
@@ -39,9 +47,15 @@ def colour_palette(angle):
     """
     # NOTE: Only need to measure 1 internal angle. If the internal angle is bigger than 90, then you can just take away 90 degrees
     # to get the smallest angle in the rhombus. This is equivalent to doing the modulus of the angle with pi/2
-    pio2 = np.pi/2.0
-    a = angle % pio2
-    angle_index = a/pio2
+    # Also need to account for the special case of a perfect square
+    
+    if angle > np.pi/2.0 - 0.001 and angle < np.pi/2.0 + 0.001: # If close to 90 degrees then it is a square
+        angle_index = 1.0
+    else:
+        pio2 = np.pi/2.0
+        a = angle % pio2
+        angle_index = a/pio2
+
     return (angle_index, 1.0 - angle_index, 0.0)
 
 
@@ -185,16 +199,19 @@ for j2 in range(SYMMETRY):
 """
 # ------------------------------------------------
 
-plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
 
 # Plot construction lines to check beforehand
-xspace = np.linspace(-10, 10)
-for j in range(SYMMETRY):
-    for k in range(-K_RANGE, K_RANGE):
-        plt.plot(xspace, construction_line(xspace, j, k, sigmas[j]))#, color=["r", "g", "b", "y", "m"][j])
+if PLOT_CONSTRUCTION:
+    plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
 
-plt.plot(x_intersections, y_intersections, "xr")
-plt.show()
+    xspace = np.linspace(-10, 10)
+    for j in range(SYMMETRY):
+        for k in range(-K_RANGE, K_RANGE):
+            plt.plot(xspace, construction_line(xspace, j, k, sigmas[j]))#, color=["r", "g", "b", "y", "m"][j])
+
+    plt.plot(x_intersections, y_intersections, "xr")
+    plt.show()
+
 
 indices = [i.find_surrounding_indices(sigmas, es) for i in intersections]
 
@@ -217,6 +234,9 @@ for indices_set in indices:
     if len(vset) == 4:
         # Sort the vertices in draw order (anticlockwise).
         vset = ccw_sort(vset)
+        # Rotate the vectors to undo the angle offset
+        for i in range(4):
+            vset[i] = np.dot(ANGLE_OFF_ROT_MAT_INV, vset[i])
 
         rhombus_colour = None
         if COLOUR:
@@ -281,4 +301,5 @@ plt.plot(x, y, ".")
 plotrange = 30
 plt.xlim(-plotrange, plotrange)
 plt.ylim(-plotrange, plotrange)
+plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
 plt.show()
