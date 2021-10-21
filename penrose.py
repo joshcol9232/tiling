@@ -4,10 +4,11 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import time
 
-SYMMETRY = int(6)
+SYMMETRY = int(5)
 ANGLE_OFFSET = np.pi/6
-K_RANGE = 20   # In both directions
+K_RANGE = 10   # In both directions
 USE_RANDOM_SIGMA = True
+COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
 
 def construction_line(x, j, k, sigma, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
     angle = (j * 2.0 * np.pi/symmetry) + angle_offset
@@ -30,6 +31,18 @@ def get_indices(r, sigmas, es, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
         i += 1
 
     return indices
+
+def colour_palette(angle):
+    """
+    Converts an angle in radians into an RGB value from 0.0 to 1.0. Palette repeats every pi/2 (or 90 degrees).
+    It's purpose is for colouring rhombuses based on their smallest internal angle.
+    """
+    # NOTE: Only need to measure 1 internal angle. If the internal angle is bigger than 90, then you can just take away 90 degrees
+    # to get the smallest angle in the rhombus. This is equivalent to doing the modulus of the angle with pi/2
+    pio2 = np.pi/2.0
+    a = angle % pio2
+    angle_index = a/pio2
+    return (angle_index, 1.0 - angle_index, 0.0)
 
 
 
@@ -81,6 +94,15 @@ class Intersection:
         surrounding_indices[3][self.j1] += 1
         surrounding_indices[3][self.j2] += 1
         return surrounding_indices
+
+
+class Rhombus:
+    """
+    Struct used for drawing a rhombus
+    """
+    def __init__(self, vertices, colour):
+        self.vertices = vertices
+        self.colour = colour
 
 
 def vertex_position_from_pentagrid(indices, es):
@@ -177,19 +199,48 @@ plt.show()
 indices = [i.find_surrounding_indices(sigmas, es) for i in intersections]
 
 
-vertices = []
+rhombuses = []
+colours = {}
+i = 0
 for indices_set in indices:
     vset = []
     for i in indices_set:
         # NOTE: The vertex only exists in the tiling if the sum of the indices is < 5 and > 0.
         # http://www.neverendingbooks.org/de-bruijns-pentagrid
         # print("Sum:", np.sum(i))
-        if np.sum(i) in [j for j in range(0, SYMMETRY+1)]:
+        if np.sum(i) in [j for j in range(1, SYMMETRY+1)]:
             v = vertex_position_from_pentagrid(i, es)
             vset.append( v )
 
-    if vset:    # If the vertex set is not empty, append it to the list of vertices
-        vertices.append(vset)
+
+    # If the vertex set is not empty and has length 4 (all shapes should be 4 sided polygons), append it to the list of vertices
+    if len(vset) == 4:
+        # Sort the vertices in draw order (anticlockwise).
+        vset = ccw_sort(vset)
+
+        rhombus_colour = None
+        if COLOUR:
+            # Find an internal angle to find out what rhombus it is. Take 3 points and use dot product.
+            # Copy them to new variables. Bear in mind that the sides will be vectors relative
+            # to the second point (the middle one, think of a v shape).
+            # NOTE: There is most likely a much better way to do this that I haven't thought of enough.
+            #       For example, using the fact we know what construction line sets are crossing each other.
+            #       For penrose this would be simple (e.g 1, 3 crossing = thick, 1, 2 crossing = thin)
+            #       but since this is generalised for different symmetries then it has to work for every case,
+            #       which I haven't figured out just yet in terms of indices.
+            side1 = vset[0] - vset[1]
+            side2 = vset[2] - vset[1]
+            sidedot = np.dot(side1, side2)
+            angle = np.arccos( np.linalg.norm(sidedot) ) # normalise the vector and then cos^{-1} is the angle.
+
+            rhombus_colour = colour_palette(angle)
+
+        rhombuses.append(Rhombus(vset, rhombus_colour))
+
+
+        # rhombuses.append(Rhombus(vset, ))
+
+    i += 1
 
 
 
@@ -199,13 +250,19 @@ ax.axis("equal")
 """ FOR PLOTTING SHAPES
 """
 
-shapes = []
-for vertex_set in vertices:
-    v = ccw_sort(vertex_set)    # Sort vertices in draw oorder
-    shapes.append(Polygon(v, True))
+shapes = {}
+for r in rhombuses:
+    if r.colour not in shapes.keys():
+        shapes[r.colour] = [Polygon(r.vertices)]
+    else:
+        shapes[r.colour].append(Polygon(r.vertices))
 
-shape_coll = PatchCollection(shapes, alpha=0.4, edgecolor="k")
-ax.add_collection(shape_coll)
+    # p = Polygon(r.vertices, edgecolor="b", facecolor=r.colour, linewidth=2.0, antialiased=False)
+    # shapes.append(p)
+
+for colour, shape in shapes.items():
+    shape_coll = PatchCollection(shape, edgecolor="k", facecolor=colour, linewidth=0.4, antialiased=True)
+    ax.add_collection(shape_coll)
 
 
 """ FOR DRAWING THE VERTICES ONLY
