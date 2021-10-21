@@ -1,6 +1,8 @@
 # tiling
 Tool for generating various quasi-crystalline patterns in 2D and 3D (perhaps 4D soon).
 
+![plot](./penrose_output.png)
+
 ## Aims:
 
 To provide capability to generate arbitrary tiling data using the de Bruijn grid method in:

@@ -4,7 +4,7 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import time
 
-SYMMETRY = 6
+SYMMETRY = 8
 ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
 K_RANGE = 20   # In both directions
 USE_RANDOM_SIGMA = True
