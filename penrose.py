@@ -4,9 +4,9 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import time
 
-SYMMETRY = 8
+SYMMETRY = 5
 ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
-K_RANGE = 20   # In both directions
+K_RANGE = 10   # In both directions
 USE_RANDOM_SIGMA = True
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
 PLOT_CONSTRUCTION = False       # Plot construction lines beforehand? (Useful for debugging)
@@ -221,11 +221,14 @@ colours = {}
 i = 0
 for indices_set in indices:
     vset = []
+    sums = np.sum(indices_set, axis=1)
+    print(sums)
+
     for i in indices_set:
-        # NOTE: The vertex only exists in the tiling if the sum of the indices is < 5 and > 0.
+        # NOTE: The vertex only exists in the tiling if the sum of the indices is <= SYMMETRY and > 0.
         # http://www.neverendingbooks.org/de-bruijns-pentagrid
-        # print("Sum:", np.sum(i))
-        if np.sum(i) in [j for j in range(1, SYMMETRY+1)]:
+        s = np.sum(i)
+        if s > 0 and s <= SYMMETRY:
             v = vertex_position_from_pentagrid(i, es)
             vset.append( v )
 
@@ -256,9 +259,6 @@ for indices_set in indices:
             rhombus_colour = colour_palette(angle)
 
         rhombuses.append(Rhombus(vset, rhombus_colour))
-
-
-        # rhombuses.append(Rhombus(vset, ))
 
     i += 1
 
