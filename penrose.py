@@ -13,7 +13,7 @@ ANGLE_OFFSET = 0.04         # Prevents divisions by 0 etcetc. Angle offset is un
 K_RANGE = 10   # In both directions
 USE_RANDOM_SIGMA = True
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
-PLOT_CONSTRUCTION = False       # Plot construction lines beforehand? (Useful for debugging)
+PLOT_CONSTRUCTION = True       # Plot construction lines beforehand? (Useful for debugging)
 
 COS_ANGLE_OFF_INV = np.cos(-ANGLE_OFFSET)
 SIN_ANGLE_OFF_INV = np.sin(-ANGLE_OFFSET)
@@ -170,9 +170,9 @@ def ccw_sort(v):
 es = [np.array([ np.cos( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ) ]) for j in range(SYMMETRY)]
 
 
-# sigmas = generate_sigma()
+sigmas = generate_sigma()
 # sigmas = np.array([0.2, 0.4, 0.3, -0.8, -0.1])
-sigmas = np.array([0.1, 0.2, 0.3, -0.8, 0.3, -0.1, 0.5, -0.5])
+# sigmas = np.array([0.1, 0.2, 0.3, -0.8, 0.3, -0.1, 0.5, -0.5])
 # sigmas = np.zeros(SYMMETRY)
 print("Offset sum:", np.sum(sigmas))
 
@@ -210,13 +210,16 @@ for j2 in range(SYMMETRY):
 # Plot construction lines to check beforehand
 if PLOT_CONSTRUCTION:
     plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
+    line_set_colours = ["r", "g", "b", "y", "m", "c", "k"]
 
-    xspace = np.linspace(-10, 10)
+    xspace = np.linspace(-20, 20)
     for j in range(SYMMETRY):
         for k in range(-K_RANGE, K_RANGE):
-            plt.plot(xspace, construction_line(xspace, j, k, sigmas[j]))#, color=["r", "g", "b", "y", "m"][j])
+            plt.plot( xspace, construction_line(xspace, j, k, sigmas[j]), color=line_set_colours[j % len(line_set_colours)] )
 
     plt.plot(x_intersections, y_intersections, "xr")
+    plt.xlim(-2, 2)
+    plt.ylim(-2, 2)
     plt.show()
 
 
