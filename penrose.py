@@ -9,7 +9,7 @@ SYMMETRY = 5
 if len(sys.argv) > 1:   # Default symmetry can be set above, but can also be passed in as argument to program
     SYMMETRY = int(sys.argv[1])
 
-ANGLE_OFFSET = np.pi/8         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
+ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
 K_RANGE = 10   # In both directions
 USE_RANDOM_SIGMA = True
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
