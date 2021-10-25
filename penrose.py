@@ -10,14 +10,16 @@ if len(sys.argv) > 1:   # Default symmetry can be set above, but can also be pas
     SYMMETRY = int(sys.argv[1])
 
 ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
-K_RANGE = 10   # In both directions
+K_RANGE = 10   # Number of lines per construction line set (in both directions)
 USE_RANDOM_SIGMA = True
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
 PLOT_CONSTRUCTION = True       # Plot construction lines beforehand? (Useful for debugging)
 
+# A couple of constants defined for the rotation matrix that un-does the ANGLE_OFFSET defined before.
 COS_ANGLE_OFF_INV = np.cos(-ANGLE_OFFSET)
 SIN_ANGLE_OFF_INV = np.sin(-ANGLE_OFFSET)
 ANGLE_OFF_ROT_MAT_INV = np.array([[COS_ANGLE_OFF_INV, -SIN_ANGLE_OFF_INV], [SIN_ANGLE_OFF_INV, COS_ANGLE_OFF_INV]])
+
 
 def construction_line(x, j, k, sigma, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
     angle = (j * 2.0 * np.pi/symmetry) + angle_offset
