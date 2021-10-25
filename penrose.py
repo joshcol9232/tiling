@@ -3,9 +3,13 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import time
+import sys
 
 SYMMETRY = 5
-ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
+if len(sys.argv) > 1:
+    SYMMETRY = int(sys.argv[1])
+
+ANGLE_OFFSET = 0.04         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
 K_RANGE = 10   # In both directions
 USE_RANDOM_SIGMA = True
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
@@ -166,8 +170,11 @@ def ccw_sort(v):
 es = [np.array([ np.cos( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ) ]) for j in range(SYMMETRY)]
 
 
-sigmas = generate_sigma()
+# sigmas = generate_sigma()
 # sigmas = np.array([0.2, 0.4, 0.3, -0.8, -0.1])
+sigmas = np.array([0.1, 0.2, 0.3, -0.8, 0.3, -0.1, 0.5, -0.5])
+# sigmas = np.zeros(SYMMETRY)
+print("Offset sum:", np.sum(sigmas))
 
 # Just find intersections along one line for now
 # Let's choose j1 = 1, k1 = 1 and compare that with every other line
@@ -221,8 +228,8 @@ colours = {}
 i = 0
 for indices_set in indices:
     vset = []
-    sums = np.sum(indices_set, axis=1)
-    print(sums)
+    #sums = np.sum(indices_set, axis=1)
+    #print(sums)
 
     for i in indices_set:
         # NOTE: The vertex only exists in the tiling if the sum of the indices is <= SYMMETRY and > 0.
