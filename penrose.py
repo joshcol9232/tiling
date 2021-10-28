@@ -175,7 +175,6 @@ def ccw_sort(v):
 
 
 even = SYMMETRY % 2 == 0
-print("Is even?:", even)
 j_range = SYMMETRY
 if even:
     j_range /= 2
@@ -240,15 +239,11 @@ if PLOT_CONSTRUCTION:
 
 indices = [i.find_surrounding_indices(sigmas, es, j_range) for i in intersections]
 
-print(indices)
-
 rhombuses = []
 colours = {}
 i = 0
 for indices_set in indices:
     vset = []
-    #sums = np.sum(indices_set, axis=1)
-    #print(sums)
 
     for i in indices_set:
         v = vertex_position_from_pentagrid(i, es)
