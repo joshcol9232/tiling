@@ -16,9 +16,18 @@ COLOUR = True       # Use colour? Colour is based on the smallest internal angle
 PLOT_CONSTRUCTION = True       # Plot construction lines beforehand? (Useful for debugging)
 
 # A couple of constants defined for the rotation matrix that un-does the ANGLE_OFFSET defined before.
-COS_ANGLE_OFF_INV = np.cos(-ANGLE_OFFSET)
-SIN_ANGLE_OFF_INV = np.sin(-ANGLE_OFFSET)
-ANGLE_OFF_ROT_MAT_INV = np.array([[COS_ANGLE_OFF_INV, -SIN_ANGLE_OFF_INV], [SIN_ANGLE_OFF_INV, COS_ANGLE_OFF_INV]])
+SQUARE_ACCURACY_RANGE = 0.001
+
+
+def rotation_matrix(a):
+    """
+    Constructs a rotation matrix of angle 'a'
+    """
+    c = np.cos(a)
+    s = np.sin(a)
+    return np.array([[c, -s], [s, c]])
+    
+ANGLE_OFF_ROT_MAT_INV = rotation_matrix(-ANGLE_OFFSET)
 
 
 def construction_line(x, j, k, sigma, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
@@ -26,7 +35,7 @@ def construction_line(x, j, k, sigma, symmetry=SYMMETRY, angle_offset=ANGLE_OFFS
     return (k - sigma - x * np.cos(angle)) / np.sin(angle)
 
 
-def get_indices(r, sigmas, es, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
+def get_indices(r, sigmas, es, j_range, angle_offset=ANGLE_OFFSET):
     """
     Returns the indices for any point on the plane.
     [a j0, b j1, c j2, d j3, e j4] where a,b,c,d,e are integers.
@@ -35,12 +44,10 @@ def get_indices(r, sigmas, es, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
     
     # Dot product with the unit vector will return the index without the original sigma shift, so then add the shift.
     # Note that since k is an integer, the distance between the lines is just 1 so it is already normalised.
-    indices = np.zeros(int(symmetry), dtype=int)
-    i = 0
-    for e in es:
-        indices[i] = int(np.ceil(np.dot(r, e) + sigmas[i]))
+    indices = np.zeros(j_range, dtype=int)
 
-        i += 1
+    for i in range(j_range):
+        indices[i] = int(np.ceil(np.dot( r, es[i] ) + sigmas[i] ))
 
     return indices
 
@@ -55,7 +62,7 @@ def colour_palette(angle):
     # to get the smallest angle in the rhombus. This is equivalent to doing the modulus of the angle with pi/2
     # Also need to account for the special case of a perfect square
     
-    if angle > np.pi/2.0 - 0.001 and angle < np.pi/2.0 + 0.001: # If close to 90 degrees then it is a square
+    if angle > np.pi/2.0 - SQUARE_ACCURACY_RANGE and angle < np.pi/2.0 + SQUARE_ACCURACY_RANGE: # If close to 90 degrees then it is a square
         angle_index = 1.0
     else:
         pio2 = np.pi/2.0
@@ -93,14 +100,14 @@ class Intersection:
 
         return np.array([x, construction_line(x, j1, k1, sigma1, symmetry=SYMMETRY)])
 
-    def find_surrounding_indices(self, sigmas, es, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
+    def find_surrounding_indices(self, sigmas, es, j_range, angle_offset=ANGLE_OFFSET):
         """
         Finds the indices for the spaces surrounding this intersection.
         Each intersection will be the corner between 4 spaces. Those 4 spaces will be either side
         of the two lines that intersected.
         """
         # Get indices that the point is located at
-        point_indices = get_indices(self.r, sigmas, es, symmetry, angle_offset)
+        point_indices = get_indices(self.r, sigmas, es, j_range, angle_offset)
         point_indices[self.j1] = self.k1  # These are already known
         point_indices[self.j2] = self.k2
         # The indices of the spaces surrounding the points are then (for j1 = 0, j2 = 1):
@@ -131,11 +138,11 @@ def vertex_position_from_pentagrid(indices, es):
     """
     vertex = np.zeros(2)    # vector in 2D space
     for i in range(len(indices)):
-        vertex += es[i] * indices[i]
+        vertex += es[i % len(es)] * indices[i]
 
     return vertex
 
-def generate_sigma(symmetry=SYMMETRY, random=USE_RANDOM_SIGMA):
+def generate_sigma(j_range, random=USE_RANDOM_SIGMA):
     """
     Generates offsets of each set of lines.
     These offsets must sum to 0.
@@ -145,7 +152,7 @@ def generate_sigma(symmetry=SYMMETRY, random=USE_RANDOM_SIGMA):
     if random:
         rng = np.random.default_rng( int(time.time() * 10) )
 
-    for i in range(symmetry-1):
+    for i in range(j_range-1):
         sigma.append(rng.random())
     # Sum of all sigma needs to equal 0
     s = np.sum(np.array(sigma))
@@ -167,12 +174,18 @@ def ccw_sort(v):
     return np.array(v_new)
 
 
+even = SYMMETRY % 2 == 0
+print("Is even?:", even)
+j_range = SYMMETRY
+if even:
+    j_range /= 2
+    j_range = int(j_range)
 
 # Define normal unit vectors for each of the sets. Required for finding indices
-es = [np.array([ np.cos( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ) ]) for j in range(SYMMETRY)]
+es = [np.array([ np.cos( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ) ]) for j in range(j_range)]
 
 
-sigmas = generate_sigma()
+sigmas = generate_sigma(j_range)
 # sigmas = np.array([0.2, 0.4, 0.3, -0.8, -0.1])
 # sigmas = np.array([0.1, 0.2, 0.3, -0.8, 0.3, -0.1, 0.5, -0.5])
 # sigmas = np.zeros(SYMMETRY)
@@ -185,8 +198,8 @@ x_intersections = []
 y_intersections = []
 intersections = []
 
-for j1 in range(SYMMETRY):
-    for j2 in range(j1 + 1, SYMMETRY):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
+for j1 in range(j_range):
+    for j2 in range(j1 + 1, j_range):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
         for k1 in range(-K_RANGE, K_RANGE):
             for k2 in range(-K_RANGE, K_RANGE):   # Go through each line of the set j2
                 intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
@@ -215,7 +228,7 @@ if PLOT_CONSTRUCTION:
     line_set_colours = ["r", "g", "b", "y", "m", "c", "k"]
 
     xspace = np.linspace(-20, 20)
-    for j in range(SYMMETRY):
+    for j in range(j_range):
         for k in range(-K_RANGE, K_RANGE):
             plt.plot( xspace, construction_line(xspace, j, k, sigmas[j]), color=line_set_colours[j % len(line_set_colours)] )
 
@@ -225,8 +238,8 @@ if PLOT_CONSTRUCTION:
     plt.show()
 
 
-indices = [i.find_surrounding_indices(sigmas, es) for i in intersections]
-
+indices = [i.find_surrounding_indices(sigmas, es, j_range) for i in intersections]
+print(indices)
 
 rhombuses = []
 colours = {}
@@ -242,7 +255,7 @@ for indices_set in indices:
         s = np.sum(i)
         if s > 0 and s <= SYMMETRY:
             v = vertex_position_from_pentagrid(i, es)
-            vset.append( v )
+            vset.append(v)
 
 
     # If the vertex set is not empty and has length 4 (all shapes should be 4 sided polygons), append it to the list of vertices
