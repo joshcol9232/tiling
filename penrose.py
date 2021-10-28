@@ -4,13 +4,15 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import time
 import sys
+from matplotlib import cm
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
 SYMMETRY = 5
 if len(sys.argv) > 1:   # Default symmetry can be set above, but can also be passed in as argument to program
     SYMMETRY = int(sys.argv[1])
 
 ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
-K_RANGE = 10   # Number of lines per construction line set (in both directions)
+K_RANGE = 18   # Number of lines per construction line set (in both directions)
 USE_RANDOM_SIGMA = True
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
 PLOT_CONSTRUCTION = True       # Plot construction lines beforehand? (Useful for debugging)
@@ -53,9 +55,9 @@ def get_indices(r, sigmas, es, j_range, angle_offset=ANGLE_OFFSET):
 
 
 
-def colour_palette(angle):
+def get_angle_index(angle):
     """
-    Converts an angle in radians into an RGB value from 0.0 to 1.0. Palette repeats every pi/2 (or 90 degrees).
+    Converts an angle in radians into a normalised value from 0.0 to 1.0. Palette repeats every pi/2 (or 90 degrees).
     It's purpose is for colouring rhombuses based on their smallest internal angle.
     """
     # NOTE: Only need to measure 1 internal angle. If the internal angle is bigger than 90, then you can just take away 90 degrees
@@ -69,7 +71,7 @@ def colour_palette(angle):
         a = angle % pio2
         angle_index = a/pio2
 
-    return (angle_index, 1.0 - angle_index, 0.0)
+    return angle_index
 
 
 
@@ -240,8 +242,9 @@ if PLOT_CONSTRUCTION:
 indices = [i.find_surrounding_indices(sigmas, es, j_range) for i in intersections]
 
 rhombuses = []
-colours = {}
 i = 0
+colour_palette = cm.get_cmap("viridis", 8)
+
 for indices_set in indices:
     vset = []
 
@@ -273,7 +276,8 @@ for indices_set in indices:
             sidedot = np.dot(side1, side2)
             angle = np.arccos( np.linalg.norm(sidedot) ) # normalise the vector and then cos^{-1} is the angle.
 
-            rhombus_colour = colour_palette(angle)
+            angle_index = get_angle_index(angle)
+            rhombus_colour = colour_palette(angle_index)
 
         rhombuses.append(Rhombus(vset, rhombus_colour))
 
