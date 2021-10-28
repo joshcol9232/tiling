@@ -211,9 +211,9 @@ for j1 in range(j_range):
 """
 j1 = 0
 k1 = 0
-for j2 in range(SYMMETRY):
+for j2 in range(j_range):
     if j2 != j1:
-        for k2 in range(K_RANGE):
+        for k2 in range(-K_RANGE, K_RANGE):
             intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
             intersections.append(intersection)
             x_intersections.append(intersection.r[0])
@@ -239,6 +239,7 @@ if PLOT_CONSTRUCTION:
 
 
 indices = [i.find_surrounding_indices(sigmas, es, j_range) for i in intersections]
+
 print(indices)
 
 rhombuses = []
@@ -250,12 +251,8 @@ for indices_set in indices:
     #print(sums)
 
     for i in indices_set:
-        # NOTE: The vertex only exists in the tiling if the sum of the indices is <= SYMMETRY and > 0.
-        # http://www.neverendingbooks.org/de-bruijns-pentagrid
-        s = np.sum(i)
-        if s > 0 and s <= SYMMETRY:
-            v = vertex_position_from_pentagrid(i, es)
-            vset.append(v)
+        v = vertex_position_from_pentagrid(i, es)
+        vset.append(v)
 
 
     # If the vertex set is not empty and has length 4 (all shapes should be 4 sided polygons), append it to the list of vertices
@@ -286,7 +283,6 @@ for indices_set in indices:
         rhombuses.append(Rhombus(vset, rhombus_colour))
 
     i += 1
-
 
 
 fig, ax = plt.subplots(1, figsize=(5, 5), dpi=200)
