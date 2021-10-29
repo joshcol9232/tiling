@@ -12,7 +12,7 @@ if len(sys.argv) > 1:   # Default symmetry can be set above, but can also be pas
     SYMMETRY = int(sys.argv[1])
 
 ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
-K_RANGE = 18   # Number of lines per construction line set (in both directions)
+K_RANGE = 15   # Number of lines per construction line set (in both directions)
 USE_RANDOM_SIGMA = True
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
 PLOT_CONSTRUCTION = True       # Plot construction lines beforehand? (Useful for debugging)
@@ -71,7 +71,7 @@ def get_angle_index(angle):
         a = angle % pio2
         angle_index = a/pio2
 
-    return angle_index
+    return np.around(angle_index, 5)   # Round it to a couple of sig figs so that colours for one rhombus is uniform
 
 
 
@@ -222,6 +222,8 @@ for j2 in range(j_range):
 """
 # ------------------------------------------------
 
+print("Found %s intersections." % len(intersections))
+
 
 # Plot construction lines to check beforehand
 if PLOT_CONSTRUCTION:
@@ -238,8 +240,9 @@ if PLOT_CONSTRUCTION:
     plt.ylim(-2, 2)
     plt.show()
 
-
 indices = [i.find_surrounding_indices(sigmas, es, j_range) for i in intersections]
+
+print("Found indices at each intersection. Generating vertices and shapes...")
 
 rhombuses = []
 i = 0
@@ -318,7 +321,7 @@ plt.plot(x, y, ".")
 """
 
 
-plotrange = 30
+plotrange = 20
 plt.xlim(-plotrange, plotrange)
 plt.ylim(-plotrange, plotrange)
 plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
