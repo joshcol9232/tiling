@@ -325,4 +325,5 @@ plotrange = 20
 plt.xlim(-plotrange, plotrange)
 plt.ylim(-plotrange, plotrange)
 plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
+plt.title("%d-fold symmetry." % SYMMETRY)
 plt.show()
