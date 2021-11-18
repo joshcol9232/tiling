@@ -12,7 +12,7 @@ if len(sys.argv) > 1:   # Default symmetry can be set above, but can also be pas
     SYMMETRY = int(sys.argv[1])
 
 ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
-K_RANGE = 15   # Number of lines per construction line set (in both directions)
+K_RANGE = 10   # Number of lines per construction line set (in both directions)
 USE_RANDOM_SIGMA = True
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
 PLOT_CONSTRUCTION = True       # Plot construction lines beforehand? (Useful for debugging)
@@ -185,6 +185,8 @@ if even:
 # Define normal unit vectors for each of the sets. Required for finding indices
 es = [np.array([ np.cos( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ) ]) for j in range(j_range)]
 
+es_no_offset = [np.array([ np.cos( j * 2 * np.pi/SYMMETRY ), np.sin( j * 2 * np.pi/SYMMETRY ) ]) for j in range(j_range)]
+
 
 sigmas = generate_sigma(j_range)
 # sigmas = np.array([0.2, 0.4, 0.3, -0.8, -0.1])
@@ -235,9 +237,12 @@ if PLOT_CONSTRUCTION:
         for k in range(-K_RANGE, K_RANGE):
             plt.plot( xspace, construction_line(xspace, j, k, sigmas[j]), color=line_set_colours[j % len(line_set_colours)] )
 
-    plt.plot(x_intersections, y_intersections, "xr")
+    plt.plot(x_intersections, y_intersections, ".r", label="Intersections")
     plt.xlim(-2, 2)
     plt.ylim(-2, 2)
+    plt.legend()
+    plt.title("de Bruijn Construction Lines")
+	
     plt.show()
 
 indices = [i.find_surrounding_indices(sigmas, es, j_range) for i in intersections]
@@ -252,7 +257,7 @@ for indices_set in indices:
     vset = []
 
     for i in indices_set:
-        v = vertex_position_from_pentagrid(i, es)
+        v = vertex_position_from_pentagrid(i, es_no_offset)
         vset.append(v)
 
 
@@ -260,9 +265,6 @@ for indices_set in indices:
     if len(vset) == 4:
         # Sort the vertices in draw order (anticlockwise).
         vset = ccw_sort(vset)
-        # Rotate the vectors to undo the angle offset
-        for i in range(4):
-            vset[i] = np.dot(ANGLE_OFF_ROT_MAT_INV, vset[i])
 
         rhombus_colour = None
         if COLOUR:
@@ -287,7 +289,7 @@ for indices_set in indices:
     i += 1
 
 
-fig, ax = plt.subplots(1, figsize=(5, 5), dpi=200)
+fig, ax = plt.subplots(1, figsize=(5, 5))
 ax.axis("equal")
 
 """ FOR PLOTTING SHAPES
@@ -321,7 +323,7 @@ plt.plot(x, y, ".")
 """
 
 
-plotrange = 20
+plotrange = 30
 plt.xlim(-plotrange, plotrange)
 plt.ylim(-plotrange, plotrange)
 plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
