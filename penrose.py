@@ -15,10 +15,9 @@ ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is un
 K_RANGE = 10   # Number of lines per construction line set (in both directions)
 USE_RANDOM_SIGMA = True
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
-PLOT_CONSTRUCTION = True       # Plot construction lines beforehand? (Useful for debugging)
+PLOT_CONSTRUCTION = False       # Plot construction lines beforehand? (Useful for debugging)
 
-# A couple of constants defined for the rotation matrix that un-does the ANGLE_OFFSET defined before.
-SQUARE_ACCURACY_RANGE = 0.001
+SQUARE_ACCURACY_RANGE = 0.001   # Detection of if the rhombus is actually a square needs some accuracy
 
 
 def rotation_matrix(a):
