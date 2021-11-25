@@ -5,12 +5,13 @@ from matplotlib.collections import PatchCollection
 import time
 import sys
 from matplotlib import cm
-from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 import threading
 
 
 SYMMETRY = 5
-if len(sys.argv) > 1:   # Default symmetry can be set above, but can also be passed in as argument to program
+# Default symmetry can be set above, but can also be passed in as argument to the program
+# e.g `python penrose.py 8` -> make Ammann-Beenker tiling (8-fold symmetry)
+if len(sys.argv) > 1:
     SYMMETRY = int(sys.argv[1])
 
 ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
@@ -20,17 +21,6 @@ COLOUR = True       # Use colour? Colour is based on the smallest internal angle
 PLOT_CONSTRUCTION = False       # Plot construction lines beforehand? (Useful for debugging)
 
 SQUARE_ACCURACY_RANGE = 0.001   # Detection of if the rhombus is actually a square needs some accuracy
-
-
-def rotation_matrix(a):
-    """
-    Constructs a rotation matrix of angle 'a'
-    """
-    c = np.cos(a)
-    s = np.sin(a)
-    return np.array([[c, -s], [s, c]])
-    
-ANGLE_OFF_ROT_MAT_INV = rotation_matrix(-ANGLE_OFFSET)
 
 
 def construction_line(x, j, k, sigma, symmetry=SYMMETRY, angle_offset=ANGLE_OFFSET):
@@ -123,7 +113,7 @@ class Intersection:
 
 class Rhombus:
     """
-    Struct used for drawing a rhombus
+    Struct used for drawing a rhombus. Just holds data for vertices and the colour.
     """
     def __init__(self, vertices, colour):
         self.vertices = vertices
@@ -171,43 +161,32 @@ def make_rhombus_from_intersection(i, sigmas, es):
         # Find an internal angle to find out what rhombus it is. Take 3 points and use dot product.
         # Copy them to new variables. Bear in mind that the sides will be vectors relative
         # to the second point (the middle one, think of a v shape).
-        # NOTE: There is most likely a much better way to do this that I haven't thought of enough.
-        #       For example, using the fact we know what construction line sets are crossing each other.
-        #       For penrose this would be simple (e.g 1, 3 crossing = thick, 1, 2 crossing = thin)
-        #       but since this is generalised for different symmetries then it has to work for every case,
-        #       which I haven't figured out just yet in terms of indices.
         side1 = vset[0] - vset[1]
         side2 = vset[2] - vset[1]
         sidedot = np.dot(side1, side2)
         angle = np.arccos( np.linalg.norm(sidedot) ) # normalise the vector and then cos^{-1} is the angle.
 
-        angle_index = get_angle_index(angle)
+        angle_index = get_angle_index(angle)    # Number between 0 and 1
         rhombus_colour = colour_palette(angle_index)
 
     return Rhombus(vset, rhombus_colour)
 
 
-even = SYMMETRY % 2 == 0
 j_range = SYMMETRY
-if even:
+if SYMMETRY % 2 == 0:
     j_range /= 2
     j_range = int(j_range)
 
 # Define normal unit vectors for each of the sets. Required for finding indices
+es_no_offset = [np.array([ np.cos( j * 2 * np.pi/SYMMETRY ), np.sin( j * 2 * np.pi/SYMMETRY ) ]) for j in range(j_range)]
+# Define with an offset so that finding intersections does not result in maths errors, as one of the vectors will be
+# completely vertical otherwise.
 es = [np.array([ np.cos( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ), np.sin( (j * 2 * np.pi/SYMMETRY) + ANGLE_OFFSET ) ]) for j in range(j_range)]
 
-es_no_offset = [np.array([ np.cos( j * 2 * np.pi/SYMMETRY ), np.sin( j * 2 * np.pi/SYMMETRY ) ]) for j in range(j_range)]
 
+sigmas = generate_sigma(j_range)     # Generate offsets for each set of lines.
+print("Offset sum:", np.sum(sigmas))    # Should sum to 0
 
-sigmas = generate_sigma(j_range)
-# sigmas = np.array([0.2, 0.4, 0.3, -0.8, -0.1])
-# sigmas = np.array([0.1, 0.2, 0.3, -0.8, 0.3, -0.1, 0.5, -0.5])
-# sigmas = np.zeros(SYMMETRY)
-print("Offset sum:", np.sum(sigmas))
-
-# Just find intersections along one line for now
-# Let's choose j1 = 1, k1 = 1 and compare that with every other line
-# Haven't drawn set 0 properly yet so set 1 is fine
 x_intersections = []
 y_intersections = []
 intersections = []
@@ -221,24 +200,9 @@ for j1 in range(j_range):
                 x_intersections.append(intersection.r[0])
                 y_intersections.append(intersection.r[1])
 
-# ----------------- FOR EXPERIMENTING WITH 1 ONLY -----------
-"""
-j1 = 0
-k1 = 0
-for j2 in range(j_range):
-    if j2 != j1:
-        for k2 in range(-K_RANGE, K_RANGE):
-            intersection = Intersection(j1, k1, j2, k2, sigmas[j1], sigmas[j2])
-            intersections.append(intersection)
-            x_intersections.append(intersection.r[0])
-            y_intersections.append(intersection.r[1])
-"""
-# ------------------------------------------------
-
 print("Found %s intersections." % len(intersections))
 
-
-# Plot construction lines to debug beforehand
+# Plot construction lines to debug beforehand (optional)
 if PLOT_CONSTRUCTION:
     plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
     line_set_colours = ["r", "g", "b", "y", "m", "c", "k"]
@@ -257,45 +221,28 @@ if PLOT_CONSTRUCTION:
     plt.show()
 
 
-rhombuses = []
-colour_palette = cm.get_cmap("viridis", 8)
-
+rhombuses = []      # List of Rhombus objects
+colour_palette = cm.get_cmap("viridis", 8)  # Use a numpy colour palette
 
 for i in intersections:
+    # Each line intersection corresponds to a single rhombus.
     rhombuses.append( make_rhombus_from_intersection(i, sigmas, es) )
 
 fig, ax = plt.subplots(1, figsize=(10, 10))
 ax.axis("equal")
 
-""" FOR PLOTTING SHAPES
-"""
-
-shapes = {}
+shapes = {}     # Dictionary of colours already found. Used to group rhombuses into PatchCollection objects
 for r in rhombuses:
     if r.colour not in shapes.keys():
         shapes[r.colour] = [Polygon(r.vertices)]
     else:
         shapes[r.colour].append(Polygon(r.vertices))
 
-    # p = Polygon(r.vertices, edgecolor="b", facecolor=r.colour, linewidth=2.0, antialiased=False)
-    # shapes.append(p)
-
 for colour, shape in shapes.items():
+    # Add to plot
     shape_coll = PatchCollection(shape, edgecolor="k", facecolor=colour, linewidth=0.4, antialiased=True)
     ax.add_collection(shape_coll)
 
-
-""" FOR DRAWING THE VERTICES ONLY
-x = []
-y = []
-for vertex_set in vertices:
-    print(len(vertex_set))
-    for v in vertex_set:
-        x.append(v[0])
-        y.append(v[1])
-
-plt.plot(x, y, ".")
-"""
 
 
 plotrange = 30
