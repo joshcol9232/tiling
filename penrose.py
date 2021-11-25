@@ -14,7 +14,7 @@ if len(sys.argv) > 1:   # Default symmetry can be set above, but can also be pas
     SYMMETRY = int(sys.argv[1])
 
 ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
-K_RANGE = 10   # Number of lines per construction line set (in both directions)
+K_RANGE = 20   # Number of lines per construction line set (in both directions)
 USE_RANDOM_SIGMA = True
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
 PLOT_CONSTRUCTION = False       # Plot construction lines beforehand? (Useful for debugging)
@@ -38,7 +38,7 @@ def construction_line(x, j, k, sigma, symmetry=SYMMETRY, angle_offset=ANGLE_OFFS
     return (k - sigma - x * np.cos(angle)) / np.sin(angle)
 
 
-def get_indices(r, sigmas, es, j_range, angle_offset=ANGLE_OFFSET):
+def get_indices(r, sigmas, es):
     """
     Returns the indices for any point on the plane.
     [a j0, b j1, c j2, d j3, e j4] where a,b,c,d,e are integers.
@@ -47,12 +47,7 @@ def get_indices(r, sigmas, es, j_range, angle_offset=ANGLE_OFFSET):
     
     # Dot product with the unit vector will return the index without the original sigma shift, so then add the shift.
     # Note that since k is an integer, the distance between the lines is just 1 so it is already normalised.
-    indices = np.zeros(j_range, dtype=int)
-
-    for i in range(j_range):
-        indices[i] = int(np.ceil(np.dot( r, es[i] ) + sigmas[i] ))
-
-    return indices
+    return np.array( [int(np.ceil(np.dot( r, es[i] ) + sigmas[i] )) for i in range(len(es))] )
 
 
 
@@ -103,14 +98,14 @@ class Intersection:
 
         return np.array([x, construction_line(x, j1, k1, sigma1, symmetry=SYMMETRY)])
 
-    def find_surrounding_indices(self, sigmas, es, j_range, angle_offset=ANGLE_OFFSET):
+    def find_surrounding_indices(self, sigmas, es):
         """
         Finds the indices for the spaces surrounding this intersection.
         Each intersection will be the corner between 4 spaces. Those 4 spaces will be either side
         of the two lines that intersected.
         """
         # Get indices that the point is located at
-        point_indices = get_indices(self.r, sigmas, es, j_range, angle_offset)
+        point_indices = get_indices(self.r, sigmas, es)
         point_indices[self.j1] = self.k1  # These are already known
         point_indices[self.j2] = self.k2
         # The indices of the spaces surrounding the points are then (for j1 = 0, j2 = 1):
@@ -162,19 +157,34 @@ def generate_sigma(j_range, random=USE_RANDOM_SIGMA):
     sigma.append(-s)
     return np.array(sigma)
 
-def ccw_sort(v):
-    """
-    Make sorting function to make sure the polygons draw properly.
-    Sorts the points in counter-clockwise order (like a radar)
-    """
-    mean = np.mean(v, axis=0)
-    d = v - mean    # Difference from mean
-    s = np.arctan2(d[:,0], d[:,1])
-    v_new = []
-    for a in np.argsort(s):
-        v_new.append(v[a])
 
-    return np.array(v_new)
+def make_rhombus_from_intersection(i, sigmas, es):
+    """
+    Generates rhombus from intersection "i"
+    """
+    indices_set = i.find_surrounding_indices(sigmas, es)
+
+    vset = [vertex_position_from_pentagrid(i, es_no_offset) for i in indices_set]
+
+    rhombus_colour = None
+    if COLOUR:
+        # Find an internal angle to find out what rhombus it is. Take 3 points and use dot product.
+        # Copy them to new variables. Bear in mind that the sides will be vectors relative
+        # to the second point (the middle one, think of a v shape).
+        # NOTE: There is most likely a much better way to do this that I haven't thought of enough.
+        #       For example, using the fact we know what construction line sets are crossing each other.
+        #       For penrose this would be simple (e.g 1, 3 crossing = thick, 1, 2 crossing = thin)
+        #       but since this is generalised for different symmetries then it has to work for every case,
+        #       which I haven't figured out just yet in terms of indices.
+        side1 = vset[0] - vset[1]
+        side2 = vset[2] - vset[1]
+        sidedot = np.dot(side1, side2)
+        angle = np.arccos( np.linalg.norm(sidedot) ) # normalise the vector and then cos^{-1} is the angle.
+
+        angle_index = get_angle_index(angle)
+        rhombus_colour = colour_palette(angle_index)
+
+    return Rhombus(vset, rhombus_colour)
 
 
 even = SYMMETRY % 2 == 0
@@ -228,7 +238,7 @@ for j2 in range(j_range):
 print("Found %s intersections." % len(intersections))
 
 
-# Plot construction lines to check beforehand
+# Plot construction lines to debug beforehand
 if PLOT_CONSTRUCTION:
     plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
     line_set_colours = ["r", "g", "b", "y", "m", "c", "k"]
@@ -248,48 +258,13 @@ if PLOT_CONSTRUCTION:
 
 
 rhombuses = []
-i = 0
 colour_palette = cm.get_cmap("viridis", 8)
 
+
 for i in intersections:
-    indices_set = i.find_surrounding_indices(sigmas, es, j_range)
+    rhombuses.append( make_rhombus_from_intersection(i, sigmas, es) )
 
-    vset = []
-
-    for i in indices_set:
-        v = vertex_position_from_pentagrid(i, es_no_offset)
-        vset.append(v)
-
-
-    # If the vertex set is not empty and has length 4 (all shapes should be 4 sided polygons), append it to the list of vertices
-    if len(vset) == 4:
-        # Sort the vertices in draw order (anticlockwise).
-        # vset = ccw_sort(vset)
-
-        rhombus_colour = None
-        if COLOUR:
-            # Find an internal angle to find out what rhombus it is. Take 3 points and use dot product.
-            # Copy them to new variables. Bear in mind that the sides will be vectors relative
-            # to the second point (the middle one, think of a v shape).
-            # NOTE: There is most likely a much better way to do this that I haven't thought of enough.
-            #       For example, using the fact we know what construction line sets are crossing each other.
-            #       For penrose this would be simple (e.g 1, 3 crossing = thick, 1, 2 crossing = thin)
-            #       but since this is generalised for different symmetries then it has to work for every case,
-            #       which I haven't figured out just yet in terms of indices.
-            side1 = vset[0] - vset[1]
-            side2 = vset[2] - vset[1]
-            sidedot = np.dot(side1, side2)
-            angle = np.arccos( np.linalg.norm(sidedot) ) # normalise the vector and then cos^{-1} is the angle.
-
-            angle_index = get_angle_index(angle)
-            rhombus_colour = colour_palette(angle_index)
-
-        rhombuses.append(Rhombus(vset, rhombus_colour))
-
-    i += 1
-
-
-fig, ax = plt.subplots(1, figsize=(5, 5))
+fig, ax = plt.subplots(1, figsize=(10, 10))
 ax.axis("equal")
 
 """ FOR PLOTTING SHAPES
