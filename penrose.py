@@ -6,6 +6,8 @@ import time
 import sys
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+import threading
+
 
 SYMMETRY = 5
 if len(sys.argv) > 1:   # Default symmetry can be set above, but can also be passed in as argument to program
@@ -118,9 +120,9 @@ class Intersection:
         surrounding_indices = np.array([np.array([point_indices[j] for j in range(len(point_indices))]) for i in range(4)])
         # Do each permutation
         surrounding_indices[1][self.j1] += 1
-        surrounding_indices[2][self.j2] += 1
-        surrounding_indices[3][self.j1] += 1
         surrounding_indices[3][self.j2] += 1
+        surrounding_indices[2][self.j1] += 1
+        surrounding_indices[2][self.j2] += 1
         return surrounding_indices
 
 
@@ -244,15 +246,14 @@ if PLOT_CONSTRUCTION:
 	
     plt.show()
 
-indices = [i.find_surrounding_indices(sigmas, es, j_range) for i in intersections]
-
-print("Found indices at each intersection. Generating vertices and shapes...")
 
 rhombuses = []
 i = 0
 colour_palette = cm.get_cmap("viridis", 8)
 
-for indices_set in indices:
+for i in intersections:
+    indices_set = i.find_surrounding_indices(sigmas, es, j_range)
+
     vset = []
 
     for i in indices_set:
@@ -263,7 +264,7 @@ for indices_set in indices:
     # If the vertex set is not empty and has length 4 (all shapes should be 4 sided polygons), append it to the list of vertices
     if len(vset) == 4:
         # Sort the vertices in draw order (anticlockwise).
-        vset = ccw_sort(vset)
+        # vset = ccw_sort(vset)
 
         rhombus_colour = None
         if COLOUR:
