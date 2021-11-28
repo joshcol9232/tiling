@@ -2,11 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
-import time
 import sys
 from matplotlib import cm
-import threading
-
+import time
 
 SYMMETRY = 5
 # Default symmetry can be set above, but can also be passed in as argument to the program
@@ -16,7 +14,7 @@ if len(sys.argv) > 1:
 
 ANGLE_OFFSET = 0.05         # Prevents divisions by 0 etcetc. Angle offset is undone at the end
 K_RANGE = 20   # Number of lines per construction line set (in both directions)
-USE_RANDOM_SIGMA = True
+USE_RANDOM_SIGMA = True     # Use random line offsets? This makes the tiling random.
 COLOUR = True       # Use colour? Colour is based on the smallest internal angle of the rhombus
 PLOT_CONSTRUCTION = False       # Plot construction lines beforehand? (Useful for debugging)
 
@@ -40,7 +38,6 @@ def get_indices(r, sigmas, es):
     return np.array( [int(np.ceil(np.dot( r, es[i] ) + sigmas[i] )) for i in range(len(es))] )
 
 
-
 def get_angle_index(angle):
     """
     Converts an angle in radians into a normalised value from 0.0 to 1.0. Palette repeats every pi/2 (or 90 degrees).
@@ -58,7 +55,6 @@ def get_angle_index(angle):
         angle_index = a/pio2
 
     return np.around(angle_index, 5)   # Round it to a couple of sig figs so that colours for one rhombus is uniform
-
 
 
 class Intersection:
@@ -130,6 +126,7 @@ def vertex_position_from_pentagrid(indices, es):
 
     return vertex
 
+
 def generate_sigma(j_range, random=USE_RANDOM_SIGMA):
     """
     Generates offsets of each set of lines.
@@ -191,6 +188,8 @@ x_intersections = []
 y_intersections = []
 intersections = []
 
+start = time.time()
+
 for j1 in range(j_range):
     for j2 in range(j1 + 1, j_range):   # Compares 0 1, 0 2, 0 3, 0 4, 1 2, 1 3, ... 3 4
         for k1 in range(-K_RANGE, K_RANGE):
@@ -200,7 +199,7 @@ for j1 in range(j_range):
                 x_intersections.append(intersection.r[0])
                 y_intersections.append(intersection.r[1])
 
-print("Found %s intersections." % len(intersections))
+print("Found %s intersections in %s seconds." % (len(intersections), time.time() - start))
 
 # Plot construction lines to debug beforehand (optional)
 if PLOT_CONSTRUCTION:
@@ -217,16 +216,19 @@ if PLOT_CONSTRUCTION:
     plt.ylim(-2, 2)
     plt.legend()
     plt.title("de Bruijn Construction Lines")
-	
     plt.show()
 
 
 rhombuses = []      # List of Rhombus objects
 colour_palette = cm.get_cmap("viridis", 8)  # Use a numpy colour palette
 
+start = time.time()
+
 for i in intersections:
     # Each line intersection corresponds to a single rhombus.
     rhombuses.append( make_rhombus_from_intersection(i, sigmas, es) )
+
+print("Calculated rhombus vertices in %s seconds." % (time.time() - start))
 
 fig, ax = plt.subplots(1, figsize=(10, 10))
 ax.axis("equal")
