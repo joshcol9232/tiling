@@ -1,11 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from matplotlib import cm
+
 
 RANDOM = True
-OFFSET_SUM_ZERO = True
-K_RANGE = 4
-RENDER_DISTANCE = 5.0
+OFFSET_SUM_ZERO = False
+DEFAULT_K_RANGE = 5
+RENDER_DISTANCE = 2.0
+
+DEFAULT_SHAPE_ACCURACY = 4  # Number of decimal places used to classify cell shapes
+SHAPE_OPACITY = 0.5
 
 class PlaneSet:
     def __init__(self, normal, offset, setnum, k_range):
@@ -20,8 +26,7 @@ class PlaneSet:
         """
         return self.normal + self.normal * (self.offset + k)
 
-
-    def get_intersections_with(self, other1, other2, k_range):
+    def get_intersections_with(self, other1, other2):
         """
         If this plane intersects with two other planes at a point, this function
         will return the location of this intersection in real space.
@@ -50,9 +55,6 @@ class PlaneSet:
         for k1 in self.k_range:
             for k2 in other1.k_range:
                 for k3 in other2.k_range:
-        # for k1 in [0]:
-        #     for k2 in [0]:
-        #         for k3 in [0]:
                     # Multiply by remaining part of catesian form (d)
                     ds = np.matrix([
                         [self.offset + k1],
@@ -69,44 +71,10 @@ class PlaneSet:
         return intersections
 
 
-def get_offsets(n, is_random, sum_to_zero, is_2d=False):
-    if is_random:
-        offsets = []
-
-        rng = np.random.default_rng(int(time.time() * 10))
-        for i in range(n - 2):
-            offsets.append(rng.random())
-
-        if sum_to_zero:
-            if not is_2d:
-                offsets.append(rng.random())
-            # Sum of all sigma needs to equal 0
-            s = np.sum(np.array(offsets))
-            offsets.append(-s)
-            if is_2d:
-                offsets.append(0.0)
-        else:
-            for _i in range(2):
-                offsets.append(rng.random())
-
-        return offsets
-    else:
-        if is_2d:
-            a = [-1.0/len(basis) for _i in range(n-1)]
-            a.append(0.0)
-            return a
-        else:
-            return [-1.0 / len(basis) for _i in range(n)]  # Centre of rotational symmetry in penrose-like case
-
 def realspace(indices, basis):
     out = np.zeros(3, dtype=float)
     for j, e in enumerate(basis):
         out += e * indices[j]
-
-    # Remove float error
-    # for k in range(3):
-    #     if abs(out[k]) < 1e-14:
-    #         out[k] = 0.0
 
     return out
 
@@ -134,13 +102,13 @@ def get_neighbours(intersection, basis, offsets):
 
     indices = gridspace(intersection["location"], basis, offsets)
 
-    print("Root indices before loading:", indices)
-    # # Load known indices into indices array
+    # DEBUG print("Root indices before loading:", indices)
+    # Load known indices into indices array
     for index, j in enumerate(intersection["js"]):
         indices[j] = intersection["ks"][index]
 
-    print("Getting neighbours for:", intersection)
-    print("Root indices:", indices)
+    # DEBUG print("Getting neighbours for:", intersection)
+    # DEBUG print("Root indices:", indices)
     # First off copy the intersection indices 8 times
     neighbours = [ np.array([ v for v in indices ]) for _i in range(8) ]
 
@@ -154,12 +122,6 @@ def get_neighbours(intersection, basis, offsets):
         neighbours[i] += e[0] * delta1 + e[1] * delta2 + e[2] * delta3
 
     return neighbours
-
-# def get_neighbours_via_sample(intersection, basis, offsets, m):
-#     # Uses multiplier `m`
-#     indices = []
-#     for i in range(8):
-
 
 
 def get_largest_node_displacement(basis):
@@ -181,6 +143,64 @@ def triple_product(a, b, c):
 """
 BASES
 """
+class Basis:
+    def __init__(self, vecs, dimensions, sum_to_zero=False):
+        self.vecs = vecs
+        self.dimensions = dimensions
+        self.is_2d = dimensions % 2 == 0
+        self.sum_to_zero = sum_to_zero
+
+    def get_offsets(self, is_random):
+        if is_random:
+            offsets = []
+            N = len(self.vecs) - 1 * self.is_2d
+
+            rng = np.random.default_rng(int(time.time() * 10))
+            for i in range(N - 1):
+                offsets.append(rng.random())
+
+            if self.sum_to_zero:
+                if not self.is_2d:
+                    offsets.append(rng.random())
+                # Sum of all sigma needs to equal 0
+                s = np.sum(np.array(offsets))
+                offsets.append(-s)
+                if self.is_2d:
+                    offsets.append(0.0)
+            else:
+                for _i in range(2):
+                    offsets.append(rng.random())
+
+            return offsets
+        else:
+            if self.is_2d:
+                a = [-1.0 / len(self.vecs) for _i in range(len(self.vecs) - 1)]
+                a.append(0.0)
+                return a
+            else:
+                return [-1.0 / len(self.vecs) for _i in range(len(self.vecs))]  # Centre of rotational symmetry in penrose-like case
+
+    def get_possible_cells(self, decimals):
+        """ Function that finds all possible cell shapes in the final mesh.
+            Number of decimal places required for finite hash keys (floats are hard to == )
+
+            Returns a dictionary of volume : [all possible combinations of basis vector to get that volume]
+        """
+        shapes = {}  # volume : set indices
+
+        for i in range(len(self.vecs-2)):  # Compare each vector set
+            for j in range(i+1, len(self.vecs)-1):
+                for k in range(j+1, len(self.vecs)):
+                    vol = abs(triple_product(self.vecs[i], self.vecs[j], self.vecs[k]))
+                    vol = np.around(vol, decimals=decimals)
+                    if vol not in shapes.keys():
+                        shapes[vol] = []
+
+                    shapes[vol].append([i, j, k])
+
+        return shapes
+
+
 def icosahedral_basis():
     # From: https://physics.princeton.edu//~steinh/QuasiPartII.pdf
     sqrt5 = np.sqrt(5)
@@ -191,31 +211,38 @@ def icosahedral_basis():
         for n in range(5)
     ]
     icos.append(np.array([0.0, 0.0, 1.0]))
-    return np.array(icos)
+    return Basis(np.array(icos), 3)
 
 def cubic_basis():
-    return np.array([
+    return Basis(np.array([
         np.array([1.0, 0.0, 0.0]),
         np.array([0.0, 1.0, 0.0]),
         np.array([0.0, 0.0, 1.0])
-    ])
+    ]), 3)
+
+def hypercubic_basis():
+    return Basis(np.array([
+        np.array([1.0, 0.0, 0.0]),
+        np.array([0.0, 1.0, 0.0]),
+        np.array([0.0, 0.0, 1.0])
+    ]), 4)
 
 def penrose_basis():
     penrose = [np.array([np.cos(j * np.pi * 2.0 / 5.0), np.sin(j * np.pi * 2.0 / 5.0), 0.0]) for j in range(5)]
     penrose.append(np.array([0.0, 0.0, 1.0]))
-    return np.array(penrose)
+    return Basis(np.array(penrose), 2, sum_to_zero=True)
 
 def ammann_basis():
     am = [np.array([np.cos(j * np.pi * 2.0 / 8.0), np.sin(j * np.pi * 2.0 / 8.0), 0.0]) for j in range(4)]
     am.append(np.array([0.0, 0.0, 1.0]))
-    return np.array(am)
+    return Basis(np.array(am), 2)
 
 def hexagonal_basis():
-    return np.array([
+    return Basis(np.array([
         np.array([1.0, 0.0, 0.0]),
         np.array([1.0/2.0, np.sqrt(3)/2.0, 0.0]),
         np.array([0.0, 0.0, 1.0]),
-    ])
+    ]), 3)
 
 def test_basis():
     # return np.array([
@@ -224,16 +251,18 @@ def test_basis():
     #     np.array([np.sqrt(3) / 2.0, 1.0 / 2.0, 0.0]),
     #     np.array([0.0, 0.0, 1.0]),
     # ])
-    return np.array([
+    return Basis(np.array([
         np.array([1.0, 0.0, 0.0]),
         np.array([0.0, 1.0, 0.0]),
         np.array([np.cos(1.5), np.sin(1.5), 0.0]),
         np.array([np.cos(1.1), np.sin(1.1), 0.0]),
         np.array([0.0, 0.0, 1.0]),
-    ])
+    ]), 2)
 
 
-FACES = [  # Faces of every rhombahedron (ACW order). Worked out on paper
+""" MAIN ALGORITHM """
+# Some definitions for each rhombohedron
+FACE_INDICES = [  # Faces of every rhombohedron (ACW order). Worked out on paper
     [0, 2, 3, 1],
     [0, 1, 5, 4],
     [5, 7, 6, 4],
@@ -257,124 +286,135 @@ EDGES = [  # Connections between neighbours for every cell
     [2, 6]
 ]
 
+class Rhombahedron:
+    def __init__(self, vertices, indices, parent_sets):
+        self.verts = vertices
+        self.indices = indices
+        self.parent_sets = parent_sets
 
-if __name__ == "__main__":
-    get_basis = penrose_basis
-    basis = get_basis()
-    _largest_disp, largest_disp_mag = get_largest_node_displacement(basis)
+    def __repr__(self):
+        return "Rhombahedron(%s parents %s)" % (self.indices[0], self.parent_sets)
 
+    def get_volume(self): # General for every rhombahedron given that vertices are generated the same way every time (they are due to get_neighbours function)
+        return abs(triple_product(self.verts[1] - self.verts[0], self.verts[2] - self.verts[0], self.verts[4] - self.verts[0]))
+
+    def get_faces(self):
+        """ Returns the vertices of each face in draw order (ACW) for the rhombahedron
+        """
+        faces = np.zeros((6, 4, 3), dtype=float)
+        for i, face in enumerate(FACE_INDICES):
+            for j, face_index in enumerate(face):
+                faces[i][j] = self.verts[face_index]
+
+        return faces
+
+    def is_within_render_distance(self, render_distance, coi=np.zeros(3)):
+        """ Utility function for checking whever the rhombohedron is in rendering distance
+        """
+        # If any of the vertices are within range, then say yes
+        for v in self.verts:
+            if np.linalg.norm(v - coi) < render_distance:
+                return True
+
+
+def dualgrid_method(basis_obj, k_ranges=None, shape_accuracy=DEFAULT_SHAPE_ACCURACY):
+    """ de Bruijn dual grid method.
+    Generates and returns rhombohedra from basis given in the range given
+
+    Returns: rhombohedra, possible cell shapes
+
+    :param basis_obj:
+    :param k_ranges:
+    :return:
+    """
+    possible_cells = basis_obj.get_possible_cells(shape_accuracy)
+    print("Possible cells:", possible_cells)
+
+    basis = basis_obj.vecs
     print("BASIS:", basis)
-    offsets = get_offsets(len(basis), RANDOM, OFFSET_SUM_ZERO, is_2d=True)
 
-    """ Penrose test offsets
-    offsets = [
-        0.321,
-        0.56321,
-        0.11345,
-        0.744,
-        -(0.744 + 0.11345 + 0.56321 + 0.321),
-        0.0,
-    ]
-    """
-    """ test offsets
-    offsets = [
-        0.321,
-        0.56321,
-        -(0.321 + 0.56321),
-        0.0,#0.744,
-    ]
-    # offsets = np.zeros(4)
-    """
+    offsets = basis_obj.get_offsets(RANDOM)
+    print("Offsets:", offsets)
 
-    # default k ranges
-    # k_ranges = [range(1 - K_RANGE, K_RANGE) for _i in range(len(basis))]
+    # Get k range
+    k_range = DEFAULT_K_RANGE
+    if type(k_ranges) == int:  # Can input 3 for example, and get -3, -2, -1, 0, 1, 2, 3 as a range for each basis vec
+        k_range = k_ranges
 
-    # pre-define k ranges for testing ### DEBUG
-    k_ranges = [
-        # [-1, 0, 1],
-        # [-1, 0, 1],
-        # [-1, 0, 1],
-        # [-1, 0, 1],
-        # [-1, 0, 1],
-        # [0],
-        # [0],
-        # [0],
-        # [0],
-        range(-5, 5),
-        range(-5, 5),
-        range(-5, 5),
-        range(-5, 5),
-        range(-5, 5),
-        [0],
-    ]
+    if type(k_ranges) == type(None): # if undefined, use default k range
+        k_ranges = [range(1 - k_range, k_range) for _i in range(len(basis))]
+        if basis_obj.is_2d:
+            k_ranges[-1] = [0]
 
     # Get each set of parallel planes
-    planesets = [ PlaneSet(e, offsets[i], i, k_ranges[i]) for (i, e) in enumerate(basis) ]
+    plane_sets = [ PlaneSet(e, offsets[i], i, k_ranges[i]) for (i, e) in enumerate(basis) ]
 
-    all_intersections = []
-    all_original_indices = []
-    vertices = []
-    in_render_dist_range = []
+    rhombohedra = {}
+    for possible_volume in possible_cells.keys():
+        rhombohedra[possible_volume] = []
 
-    ax = plt.axes(projection="3d")
-    # ax.set_box_aspect(aspect=(1, 1, 1))
-
-    colourmap = plt.get_cmap("viridis")
-
-    # Find intersections between each of the planesets
+    # Find intersections between each of the plane sets
     for p in range(len(basis) - 2):
         for q in range(p+1, len(basis)-1):
             for r in range(q+1, len(basis)):
-                intersections = planesets[p].get_intersections_with(planesets[q], planesets[r], K_RANGE)
-                print("Intersections between plane sets p:%s, q:%s, r:%s : %d" % (p, q, r, len(intersections)))
+                intersections = plane_sets[p].get_intersections_with(plane_sets[q], plane_sets[r])
+                # DEBUG print("Intersections between plane sets p:%s, q:%s, r:%s : %d" % (p, q, r, len(intersections)))
                 for i in intersections:
-                    all_intersections.append(i)
                     # Calculate neighbours for this intersection
                     indices_set = get_neighbours(i, basis, offsets)
                     vertices_set = []
-                    # NOTE: debug
-                    # if np.linalg.norm(indices) > 1000:
-                    #     print("HUGE INDEX", i)
-                    #     print(indices)
 
                     for indices in indices_set:
                         vertex = realspace(indices, basis)
-                        print("Vertex output for %s:\t%s" % (indices, vertex))
-                        # print("Indices, Vertex:", indices, vertex)
+                        # DEBUG print("Vertex output for %s:\t%s" % (indices, vertex))
                         vertices_set.append(vertex)
-                        vertices.append(vertex)
 
-                    # Plot connections if in render distance
-                    in_range = False
-                    for v in vertices_set:
-                        if np.linalg.norm(v) < RENDER_DISTANCE:
-                            in_range = True
-                            break
+                    vertices_set = np.array(vertices_set)
+                    r = Rhombahedron(vertices_set, indices_set, i["js"])
+                    # Get volume and append to appropriate rhombohedra list
+                    volume = r.get_volume()
+                    volume = np.around(volume, shape_accuracy)
+                    rhombohedra[volume].append(r)
 
-                    for _i in range(8):
-                        in_render_dist_range.append(in_range)
+    return rhombohedra, possible_cells
 
-                    if in_range:
-                        # Get colour
-                        volume = abs(triple_product(vertices_set[1] - vertices_set[0], vertices_set[2] - vertices_set[0], vertices_set[4] - vertices_set[0]))
-                        col = colourmap(volume)
-                        print("Vol:", volume)
-                        for edge in EDGES:
-                            v1 = vertices_set[edge[0]]
-                            v2 = vertices_set[edge[1]]
-                            ax.plot([v2[0], v1[0]], [v2[1], v1[1]], [v2[2], v1[2]], "-", color=col)
+def render_rhombohedra(rhombohedra, colormap_str, render_distance=RENDER_DISTANCE):
+    """ Renders rhombohedra with matplotlib
+    """
+    clrmap = cm.get_cmap(colormap_str)
 
-                print()
+    # Find centre of interest
+    all_verts = []
+    for volume, rhombs in rhombohedra.items():
+        for r in rhombs:
+            for v in r.verts:
+                all_verts.append(v)
 
-    vertices = np.array(vertices)
+    coi = np.mean(all_verts, axis=0)  # centre of interest is mean of all the vertices
+    print("Centre of interest:\t", coi)
 
-    vertices_in_range = vertices[in_render_dist_range]
-    ax.plot(vertices_in_range[:,0], vertices_in_range[:,1], vertices_in_range[:,2], "k.", markersize=10)
+    for volume, rhombs in rhombohedra.items():
+        color = clrmap(volume)
 
-    # Set axis scaling equal
+        for r in rhombs:
+            if r.is_within_render_distance(render_distance, coi=coi):
+                faces = r.get_faces()
+                shape_col = Poly3DCollection(faces, facecolors=color, linewidths=0.2, edgecolors="k", alpha=SHAPE_OPACITY)
+                ax.add_collection(shape_col)
+
+    # Set axis scaling equal and display
     world_limits = ax.get_w_lims()
     ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
     plt.show()
+
+if __name__ == "__main__":
+    get_basis = icosahedral_basis
+    basis_obj = get_basis()
+
+    ax = plt.axes(projection="3d")
+
+    rhombohedra, _possible_cells = dualgrid_method(basis_obj)
+    render_rhombohedra(rhombohedra, "viridis")
