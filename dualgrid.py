@@ -3,13 +3,13 @@ import matplotlib.pyplot as plt
 import time
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib import cm
-
+import os
 
 RANDOM = True
 OFFSET_SUM_ZERO = False
-DEFAULT_K_RANGE = 2
-RENDER_DISTANCE = 3.0
-RENDER_DISTANCE_TYPE = "cubic"   # options: "cubic", "spherical"
+DEFAULT_K_RANGE = 1
+RENDER_DISTANCE = 2.0
+RENDER_DISTANCE_TYPE = "spherical"   # options: "cubic", "spherical"
 
 DEFAULT_SHAPE_ACCURACY = 4  # Number of decimal places used to classify cell shapes
 SHAPE_OPACITY = 0.5
@@ -318,11 +318,11 @@ class Rhombahedron:
         for v in self.verts:
             d = v - centre
             sizediv2 = size/2
-            if abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2:
+            if abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2: # simple axis aligned cube collision
                 return True
 
 
-def dualgrid_method(basis_obj, k_ranges=None, shape_accuracy=DEFAULT_SHAPE_ACCURACY):
+def dualgrid_method(basis_obj, k_ranges=None, offsets=None, shape_accuracy=DEFAULT_SHAPE_ACCURACY):
     """ de Bruijn dual grid method.
     Generates and returns rhombohedra from basis given in the range given
 
@@ -333,13 +333,10 @@ def dualgrid_method(basis_obj, k_ranges=None, shape_accuracy=DEFAULT_SHAPE_ACCUR
     :return:
     """
     possible_cells = basis_obj.get_possible_cells(shape_accuracy)
-    print("Possible cells:", possible_cells)
-
     basis = basis_obj.vecs
-    print("BASIS:", basis)
 
-    offsets = basis_obj.get_offsets(RANDOM)
-    print("Offsets:", offsets)
+    if type(offsets) == type(None):
+        offsets = basis_obj.get_offsets(RANDOM)
 
     # Get k range
     k_range = DEFAULT_K_RANGE
@@ -383,20 +380,19 @@ def dualgrid_method(basis_obj, k_ranges=None, shape_accuracy=DEFAULT_SHAPE_ACCUR
 
     return rhombohedra, possible_cells
 
-def render_rhombohedra(rhombohedra, colormap_str, render_distance=RENDER_DISTANCE):
+def render_rhombohedra(rhombohedra, colormap_str, render_distance=RENDER_DISTANCE, coi=None):
     """ Renders rhombohedra with matplotlib
     """
     clrmap = cm.get_cmap(colormap_str)
 
-    # Find centre of interest
-    all_verts = []
-    for volume, rhombs in rhombohedra.items():
-        for r in rhombs:
-            for v in r.verts:
-                all_verts.append(v)
-
-    coi = np.mean(all_verts, axis=0)  # centre of interest is mean of all the vertices
-    print("Centre of interest:\t", coi)
+    if type(coi) == type(None):
+        # Find centre of interest
+        all_verts = []
+        for volume, rhombs in rhombohedra.items():
+            for r in rhombs:
+                for v in r.verts:
+                    all_verts.append(v)
+        coi = np.mean(all_verts, axis=0)  # centre of interest is mean of all the vertices
 
     for volume, rhombs in rhombohedra.items():
         color = clrmap(volume)
@@ -428,13 +424,15 @@ def render_rhombohedra(rhombohedra, colormap_str, render_distance=RENDER_DISTANC
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
-    plt.show()
+
+    return coi
+
 
 if __name__ == "__main__":
     get_basis = icosahedral_basis
     basis_obj = get_basis()
-
     ax = plt.axes(projection="3d")
 
     rhombohedra, _possible_cells = dualgrid_method(basis_obj)
-    render_rhombohedra(rhombohedra, "viridis")
+    render_rhombohedra(rhombohedra, "ocean")
+    plt.show()
