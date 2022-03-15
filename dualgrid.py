@@ -7,7 +7,7 @@ from matplotlib import cm
 
 RANDOM = True
 OFFSET_SUM_ZERO = False
-DEFAULT_K_RANGE = 5
+DEFAULT_K_RANGE = 2
 RENDER_DISTANCE = 2.0
 
 DEFAULT_SHAPE_ACCURACY = 4  # Number of decimal places used to classify cell shapes
@@ -55,15 +55,15 @@ class PlaneSet:
         for k1 in self.k_range:
             for k2 in other1.k_range:
                 for k3 in other2.k_range:
-                    # Multiply by remaining part of catesian form (d)
+                    # remaining part of cartesian form (d)
                     ds = np.matrix([
                         [self.offset + k1],
                         [other1.offset + k2],
                         [other2.offset + k3]
                     ])  # Last row of the matrix -> i.e last element of cartesian form ax + bx + c = d, `d`
                     xyz = np.matmul(coef_inv, ds)
-                    intersections.append({
-                        "location": np.array([xyz[0, 0], xyz[1, 0], xyz[2, 0]]),
+                    intersections.append({   # Append information about the intersection
+                        "location": np.array([xyz[0, 0], xyz[1, 0], xyz[2, 0]]),   # column matrix -> vector
                         "ks": [k1, k2, k3],
                         "js": [self.setnum, other1.setnum, other2.setnum],
                     })
@@ -222,9 +222,10 @@ def cubic_basis():
 
 def hypercubic_basis():
     return Basis(np.array([
-        np.array([1.0, 0.0, 0.0]),
-        np.array([0.0, 1.0, 0.0]),
-        np.array([0.0, 0.0, 1.0])
+        np.array([1.0, 0.0, 0.0, 0.0]),
+        np.array([0.0, 1.0, 0.0, 0.0]),
+        np.array([0.0, 0.0, 1.0, 0.0]),
+        np.array([0.0, 0.0, 0.0, 1.0]),
     ]), 4)
 
 def penrose_basis():
