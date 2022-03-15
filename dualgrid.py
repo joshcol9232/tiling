@@ -8,7 +8,8 @@ from matplotlib import cm
 RANDOM = True
 OFFSET_SUM_ZERO = False
 DEFAULT_K_RANGE = 2
-RENDER_DISTANCE = 2.0
+RENDER_DISTANCE = 3.0
+RENDER_DISTANCE_TYPE = "cubic"   # options: "cubic", "spherical"
 
 DEFAULT_SHAPE_ACCURACY = 4  # Number of decimal places used to classify cell shapes
 SHAPE_OPACITY = 0.5
@@ -246,19 +247,13 @@ def hexagonal_basis():
     ]), 3)
 
 def test_basis():
-    # return np.array([
-    #     np.array([1.0, 0.0, 0.0]),
-    #     np.array([1.0/2.0, np.sqrt(3)/2.0, 0.0]),
-    #     np.array([np.sqrt(3) / 2.0, 1.0 / 2.0, 0.0]),
-    #     np.array([0.0, 0.0, 1.0]),
-    # ])
     return Basis(np.array([
         np.array([1.0, 0.0, 0.0]),
         np.array([0.0, 1.0, 0.0]),
         np.array([np.cos(1.5), np.sin(1.5), 0.0]),
         np.array([np.cos(1.1), np.sin(1.1), 0.0]),
         np.array([0.0, 0.0, 1.0]),
-    ]), 2)
+    ]), 3)
 
 
 """ MAIN ALGORITHM """
@@ -309,12 +304,21 @@ class Rhombahedron:
 
         return faces
 
-    def is_within_render_distance(self, render_distance, coi=np.zeros(3)):
+    def is_within_radius(self, radius, centre=np.zeros(3)):
         """ Utility function for checking whever the rhombohedron is in rendering distance
         """
         # If any of the vertices are within range, then say yes
         for v in self.verts:
-            if np.linalg.norm(v - coi) < render_distance:
+            if np.linalg.norm(v - centre) < radius:
+                return True
+
+    def is_inside_box(self, size, centre=np.zeros(3)):
+        """ Checks if any of the vertices are within a box of size given with centre given
+        """
+        for v in self.verts:
+            d = v - centre
+            sizediv2 = size/2
+            if abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2:
                 return True
 
 
@@ -398,7 +402,13 @@ def render_rhombohedra(rhombohedra, colormap_str, render_distance=RENDER_DISTANC
         color = clrmap(volume)
 
         for r in rhombs:
-            if r.is_within_render_distance(render_distance, coi=coi):
+            inside_render = False
+            if RENDER_DISTANCE_TYPE == "cubic":
+                inside_render = r.is_inside_box(render_distance, centre=coi)
+            else:  # Defaults to spherical
+                inside_render = r.is_within_radius(render_distance, centre=coi)
+
+            if inside_render:
                 faces = r.get_faces()
                 shape_col = Poly3DCollection(faces, facecolors=color, linewidths=0.2, edgecolors="k", alpha=SHAPE_OPACITY)
                 ax.add_collection(shape_col)
