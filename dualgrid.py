@@ -416,6 +416,15 @@ def render_rhombohedra(rhombohedra, colormap_str, render_distance=RENDER_DISTANC
     # Set axis scaling equal and display
     world_limits = ax.get_w_lims()
     ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
+
+    axes_bounds = [
+        coi - np.array([RENDER_DISTANCE, RENDER_DISTANCE, RENDER_DISTANCE]),  # Lower
+        coi + np.array([RENDER_DISTANCE, RENDER_DISTANCE, RENDER_DISTANCE])  # Upper
+    ]
+    ax.set_xlim(axes_bounds[0][0], axes_bounds[1][0])
+    ax.set_ylim(axes_bounds[0][1], axes_bounds[1][1])
+    ax.set_zlim(axes_bounds[0][2], axes_bounds[1][2])
+
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
