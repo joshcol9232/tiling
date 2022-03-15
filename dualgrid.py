@@ -114,7 +114,7 @@ def gridspace(r, basis, offsets):
     out = np.zeros(len(basis), dtype=int)
 
     for j, e in enumerate(basis):
-        out[j] = int(np.ceil( np.dot( r, basis[j] ) + offsets[j] ))
+        out[j] = int(np.ceil( np.dot( r, basis[j] ) - offsets[j] ))
 
     return out
 
@@ -133,6 +133,14 @@ def get_neighbours(intersection, basis, offsets):
     ])
 
     indices = gridspace(intersection["location"], basis, offsets)
+
+    print("Root indices before loading:", indices)
+    # # Load known indices into indices array
+    for index, j in enumerate(intersection["js"]):
+        indices[j] = intersection["ks"][index]
+
+    print("Getting neighbours for:", intersection)
+    print("Root indices:", indices)
     # First off copy the intersection indices 8 times
     neighbours = [ np.array([ v for v in indices ]) for _i in range(8) ]
 
@@ -167,6 +175,8 @@ def get_largest_node_displacement(basis):
 
     return l, l_norm
 
+def triple_product(a, b, c):
+    return np.dot( a, np.cross(b, c) )
 
 """
 BASES
@@ -202,9 +212,24 @@ def ammann_basis():
 
 def hexagonal_basis():
     return np.array([
-        np.array([0.0, 0.0, 1.0]),
         np.array([1.0, 0.0, 0.0]),
         np.array([1.0/2.0, np.sqrt(3)/2.0, 0.0]),
+        np.array([0.0, 0.0, 1.0]),
+    ])
+
+def test_basis():
+    # return np.array([
+    #     np.array([1.0, 0.0, 0.0]),
+    #     np.array([1.0/2.0, np.sqrt(3)/2.0, 0.0]),
+    #     np.array([np.sqrt(3) / 2.0, 1.0 / 2.0, 0.0]),
+    #     np.array([0.0, 0.0, 1.0]),
+    # ])
+    return np.array([
+        np.array([1.0, 0.0, 0.0]),
+        np.array([0.0, 1.0, 0.0]),
+        np.array([np.cos(1.5), np.sin(1.5), 0.0]),
+        np.array([np.cos(1.1), np.sin(1.1), 0.0]),
+        np.array([0.0, 0.0, 1.0]),
     ])
 
 
@@ -234,12 +259,12 @@ EDGES = [  # Connections between neighbours for every cell
 
 
 if __name__ == "__main__":
-    get_basis = hexagonal_basis
+    get_basis = penrose_basis
     basis = get_basis()
     _largest_disp, largest_disp_mag = get_largest_node_displacement(basis)
 
     print("BASIS:", basis)
-    #offsets = #get_offsets(len(basis), RANDOM, OFFSET_SUM_ZERO, is_2d=True)
+    offsets = get_offsets(len(basis), RANDOM, OFFSET_SUM_ZERO, is_2d=True)
 
     """ Penrose test offsets
     offsets = [
@@ -251,21 +276,36 @@ if __name__ == "__main__":
         0.0,
     ]
     """
-    """ Hex test offsets
+    """ test offsets
+    offsets = [
+        0.321,
+        0.56321,
+        -(0.321 + 0.56321),
+        0.0,#0.744,
+    ]
+    # offsets = np.zeros(4)
     """
-    offsets = [0.0, 0.0, 0.0]
 
     # default k ranges
     # k_ranges = [range(1 - K_RANGE, K_RANGE) for _i in range(len(basis))]
 
     # pre-define k ranges for testing ### DEBUG
     k_ranges = [
-        [0],
-        [0],
-        [0],
+        # [-1, 0, 1],
+        # [-1, 0, 1],
+        # [-1, 0, 1],
+        # [-1, 0, 1],
+        # [-1, 0, 1],
         # [0],
         # [0],
-        # [0]
+        # [0],
+        # [0],
+        range(-5, 5),
+        range(-5, 5),
+        range(-5, 5),
+        range(-5, 5),
+        range(-5, 5),
+        [0],
     ]
 
     # Get each set of parallel planes
@@ -279,13 +319,14 @@ if __name__ == "__main__":
     ax = plt.axes(projection="3d")
     # ax.set_box_aspect(aspect=(1, 1, 1))
 
+    colourmap = plt.get_cmap("viridis")
+
     # Find intersections between each of the planesets
     for p in range(len(basis) - 2):
         for q in range(p+1, len(basis)-1):
             for r in range(q+1, len(basis)):
                 intersections = planesets[p].get_intersections_with(planesets[q], planesets[r], K_RANGE)
                 print("Intersections between plane sets p:%s, q:%s, r:%s : %d" % (p, q, r, len(intersections)))
-                print(intersections)
                 for i in intersections:
                     all_intersections.append(i)
                     # Calculate neighbours for this intersection
@@ -296,11 +337,9 @@ if __name__ == "__main__":
                     #     print("HUGE INDEX", i)
                     #     print(indices)
 
-                    # indices[p] = i["ks"][0]
-                    # indices[q] = i["ks"][1]
-                    # indices[r] = i["ks"][2]
                     for indices in indices_set:
                         vertex = realspace(indices, basis)
+                        print("Vertex output for %s:\t%s" % (indices, vertex))
                         # print("Indices, Vertex:", indices, vertex)
                         vertices_set.append(vertex)
                         vertices.append(vertex)
@@ -316,10 +355,14 @@ if __name__ == "__main__":
                         in_render_dist_range.append(in_range)
 
                     if in_range:
+                        # Get colour
+                        volume = abs(triple_product(vertices_set[1] - vertices_set[0], vertices_set[2] - vertices_set[0], vertices_set[4] - vertices_set[0]))
+                        col = colourmap(volume)
+                        print("Vol:", volume)
                         for edge in EDGES:
                             v1 = vertices_set[edge[0]]
                             v2 = vertices_set[edge[1]]
-                            ax.plot([v2[0], v1[0]], [v2[1], v1[1]], [v2[2], v1[2]], "r-")
+                            ax.plot([v2[0], v1[0]], [v2[1], v1[1]], [v2[2], v1[2]], "-", color=col)
 
                 print()
 
@@ -327,8 +370,8 @@ if __name__ == "__main__":
 
     vertices_in_range = vertices[in_render_dist_range]
     ax.plot(vertices_in_range[:,0], vertices_in_range[:,1], vertices_in_range[:,2], "k.", markersize=10)
-    # ax.set_zlim(0.8, 1.2)
 
+    # Set axis scaling equal
     world_limits = ax.get_w_lims()
     ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
     ax.set_xlabel("x")
