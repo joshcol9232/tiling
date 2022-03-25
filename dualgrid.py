@@ -7,9 +7,9 @@ import os
 
 RANDOM = True
 OFFSET_SUM_ZERO = False
-DEFAULT_K_RANGE = 1
-RENDER_DISTANCE = 2.0
-RENDER_DISTANCE_TYPE = "spherical"   # options: "cubic", "spherical"
+DEFAULT_K_RANGE = 3
+RENDER_DISTANCE = 4.0
+RENDER_DISTANCE_TYPE = "cubic"   # options: "cubic", "spherical"
 
 DEFAULT_SHAPE_ACCURACY = 4  # Number of decimal places used to classify cell shapes
 SHAPE_OPACITY = 0.5
@@ -304,22 +304,31 @@ class Rhombahedron:
 
         return faces
 
-    def is_within_radius(self, radius, centre=np.zeros(3)):
+    def is_within_radius(self, radius, fast=False, centre=np.zeros(3)):
         """ Utility function for checking whever the rhombohedron is in rendering distance
+        `fast` just checks the first vertex
         """
         # If any of the vertices are within range, then say yes
-        for v in self.verts:
-            if np.linalg.norm(v - centre) < radius:
-                return True
+        if fast:
+            return np.linalg.norm(self.verts[0] - centre) < radius
+        else:
+            for v in self.verts:
+                if np.linalg.norm(v - centre) < radius:
+                    return True
 
-    def is_inside_box(self, size, centre=np.zeros(3)):
+    def is_inside_box(self, size, fast=False, centre=np.zeros(3)):
         """ Checks if any of the vertices are within a box of size given with centre given
+        `fast` just checks 1 vertex of the rhombus
         """
-        for v in self.verts:
-            d = v - centre
-            sizediv2 = size/2
-            if abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2: # simple axis aligned cube collision
-                return True
+        sizediv2 = size / 2
+        if fast:
+            d = self.verts[0] - centre
+            return abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2
+        else:
+            for v in self.verts:
+                d = v - centre
+                if abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2: # simple axis aligned cube collision
+                    return True
 
 
 def dualgrid_method(basis_obj, k_ranges=None, offsets=None, shape_accuracy=DEFAULT_SHAPE_ACCURACY):
@@ -343,10 +352,9 @@ def dualgrid_method(basis_obj, k_ranges=None, offsets=None, shape_accuracy=DEFAU
     if type(k_ranges) == int:  # Can input 3 for example, and get -3, -2, -1, 0, 1, 2, 3 as a range for each basis vec
         k_range = k_ranges
 
-    if type(k_ranges) == type(None): # if undefined, use default k range
-        k_ranges = [range(1 - k_range, k_range) for _i in range(len(basis))]
-        if basis_obj.is_2d:
-            k_ranges[-1] = [0]
+    k_ranges = [range(1 - k_range, k_range) for _i in range(len(basis))]
+    if basis_obj.is_2d:
+        k_ranges[-1] = [0]
 
     # Get each set of parallel planes
     plane_sets = [ PlaneSet(e, offsets[i], i, k_ranges[i]) for (i, e) in enumerate(basis) ]
@@ -380,13 +388,14 @@ def dualgrid_method(basis_obj, k_ranges=None, offsets=None, shape_accuracy=DEFAU
 
     return rhombohedra, possible_cells
 
-def render_rhombohedra(rhombohedra, colormap_str, render_distance=RENDER_DISTANCE, coi=None):
+def render_rhombohedra(ax, rhombohedra, colormap_str, render_distance=RENDER_DISTANCE, coi=None, fast_render_dist_checks=False):
     """ Renders rhombohedra with matplotlib
     """
     clrmap = cm.get_cmap(colormap_str)
 
     if type(coi) == type(None):
         # Find centre of interest
+        print("Finding COI")
         all_verts = []
         for volume, rhombs in rhombohedra.items():
             for r in rhombs:
@@ -400,9 +409,9 @@ def render_rhombohedra(rhombohedra, colormap_str, render_distance=RENDER_DISTANC
         for r in rhombs:
             inside_render = False
             if RENDER_DISTANCE_TYPE == "cubic":
-                inside_render = r.is_inside_box(render_distance, centre=coi)
+                inside_render = r.is_inside_box(render_distance, centre=coi, fast=fast_render_dist_checks)
             else:  # Defaults to spherical
-                inside_render = r.is_within_radius(render_distance, centre=coi)
+                inside_render = r.is_within_radius(render_distance, centre=coi, fast=fast_render_dist_checks)
 
             if inside_render:
                 faces = r.get_faces()
@@ -427,12 +436,11 @@ def render_rhombohedra(rhombohedra, colormap_str, render_distance=RENDER_DISTANC
 
     return coi
 
-
 if __name__ == "__main__":
     get_basis = icosahedral_basis
     basis_obj = get_basis()
     ax = plt.axes(projection="3d")
 
     rhombohedra, _possible_cells = dualgrid_method(basis_obj)
-    render_rhombohedra(rhombohedra, "ocean")
+    render_rhombohedra(ax, rhombohedra, "ocean")
     plt.show()
