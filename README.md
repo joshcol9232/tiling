@@ -1,21 +1,21 @@
 # tiling
 Tool for generating generalised aperiodic tilings in 2D, 3D and 4D.
 
-![plot](./penrose_output.png)
-
 ## Aims:
 
 To provide capability to generate arbitrary tiling data using the de Bruijn grid method in:
 
 - 2D (Done?: Yes)
 
-- 3D (Done?: No)
+- 3D (Done?: Yes)
 
 - 4D (Done?: No)
 
+- ND (Done?: No)
 
-## Plan:
 
-Create a python module that generates the required data to form the aperiodic tilings along with their decoration (e.g filled tiles, filled volumes etc). Just a black box that you put a request into, and it gives you graph data out. More powerful/useful as it can just be used as a standalone python module.
+## Usage:
 
-Then perhaps have a second utility module that builds on top of the first which has the capability to render the points as images (through matplotlib), or as 3D printer files (something like `stl`, `obj` or `vrml` files). Not sure how 4D objects are usually rendered yet.
+The `dualgrid` module contains the method itself, which will return a list of rhombohedra. There are then various
+methods in the `utils` module that enable you to render the shapes, save them to an STL file (soon), and choose
+pre-defined bases. See `example.py` for and example of rendering an icosahedral quasicrystal.
