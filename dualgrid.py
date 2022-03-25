@@ -1,18 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import time
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from matplotlib import cm
-import os
 
-RANDOM = True
-OFFSET_SUM_ZERO = False
 DEFAULT_K_RANGE = 3
-RENDER_DISTANCE = 4.0
-RENDER_DISTANCE_TYPE = "cubic"   # options: "cubic", "spherical"
-
-DEFAULT_SHAPE_ACCURACY = 4  # Number of decimal places used to classify cell shapes
-SHAPE_OPACITY = 0.5
 
 class PlaneSet:
     def __init__(self, normal, offset, setnum, k_range):
@@ -141,9 +130,7 @@ def get_largest_node_displacement(basis):
 def triple_product(a, b, c):
     return np.dot( a, np.cross(b, c) )
 
-"""
-BASES
-"""
+
 class Basis:
     def __init__(self, vecs, dimensions, sum_to_zero=False):
         self.vecs = vecs
@@ -200,61 +187,6 @@ class Basis:
                     shapes[vol].append([i, j, k])
 
         return shapes
-
-
-def icosahedral_basis():
-    # From: https://physics.princeton.edu//~steinh/QuasiPartII.pdf
-    sqrt5 = np.sqrt(5)
-    icos = [
-        np.array([(2.0 / sqrt5) * np.cos(2 * np.pi * n / 5),
-                  (2.0 / sqrt5) * np.sin(2 * np.pi * n / 5),
-                  1.0 / sqrt5])
-        for n in range(5)
-    ]
-    icos.append(np.array([0.0, 0.0, 1.0]))
-    return Basis(np.array(icos), 3)
-
-def cubic_basis():
-    return Basis(np.array([
-        np.array([1.0, 0.0, 0.0]),
-        np.array([0.0, 1.0, 0.0]),
-        np.array([0.0, 0.0, 1.0])
-    ]), 3)
-
-def hypercubic_basis():
-    return Basis(np.array([
-        np.array([1.0, 0.0, 0.0, 0.0]),
-        np.array([0.0, 1.0, 0.0, 0.0]),
-        np.array([0.0, 0.0, 1.0, 0.0]),
-        np.array([0.0, 0.0, 0.0, 1.0]),
-    ]), 4)
-
-def penrose_basis():
-    penrose = [np.array([np.cos(j * np.pi * 2.0 / 5.0), np.sin(j * np.pi * 2.0 / 5.0), 0.0]) for j in range(5)]
-    penrose.append(np.array([0.0, 0.0, 1.0]))
-    return Basis(np.array(penrose), 2, sum_to_zero=True)
-
-def ammann_basis():
-    am = [np.array([np.cos(j * np.pi * 2.0 / 8.0), np.sin(j * np.pi * 2.0 / 8.0), 0.0]) for j in range(4)]
-    am.append(np.array([0.0, 0.0, 1.0]))
-    return Basis(np.array(am), 2)
-
-def hexagonal_basis():
-    return Basis(np.array([
-        np.array([1.0, 0.0, 0.0]),
-        np.array([1.0/2.0, np.sqrt(3)/2.0, 0.0]),
-        np.array([0.0, 0.0, 1.0]),
-    ]), 3)
-
-def test_basis():
-    return Basis(np.array([
-        np.array([1.0, 0.0, 0.0]),
-        np.array([0.0, 1.0, 0.0]),
-        np.array([np.cos(1.5), np.sin(1.5), 0.0]),
-        np.array([np.cos(1.1), np.sin(1.1), 0.0]),
-        np.array([0.0, 0.0, 1.0]),
-    ]), 3)
-
 
 """ MAIN ALGORITHM """
 # Some definitions for each rhombohedron
@@ -331,9 +263,10 @@ class Rhombahedron:
                     return True
 
 
-def dualgrid_method(basis_obj, k_ranges=None, offsets=None, shape_accuracy=DEFAULT_SHAPE_ACCURACY):
+def dualgrid_method(basis_obj, k_ranges=None, offsets=None, random=True, shape_accuracy=4):
     """ de Bruijn dual grid method.
-    Generates and returns rhombohedra from basis given in the range given
+    Generates and returns rhombohedra from basis given in the range given.
+    Shape accuracy is the number of decimal places used to classify cell shapes
 
     Returns: rhombohedra, possible cell shapes
 
@@ -345,16 +278,17 @@ def dualgrid_method(basis_obj, k_ranges=None, offsets=None, shape_accuracy=DEFAU
     basis = basis_obj.vecs
 
     if type(offsets) == type(None):
-        offsets = basis_obj.get_offsets(RANDOM)
+        offsets = basis_obj.get_offsets(random)
 
     # Get k range
-    k_range = DEFAULT_K_RANGE
-    if type(k_ranges) == int:  # Can input 3 for example, and get -3, -2, -1, 0, 1, 2, 3 as a range for each basis vec
-        k_range = k_ranges
+    if type(k_ranges) == int or type(k_ranges) == type(None):
+        k_range = DEFAULT_K_RANGE
+        if type(k_ranges) == int:  # Can input 3 for example, and get -3, -2, -1, 0, 1, 2, 3 as a range for each basis vec
+            k_range = k_ranges
 
-    k_ranges = [range(1 - k_range, k_range) for _i in range(len(basis))]
-    if basis_obj.is_2d:
-        k_ranges[-1] = [0]
+            k_ranges = [range(1 - k_range, k_range) for _i in range(len(basis))]
+            if basis_obj.is_2d:
+                k_ranges[-1] = [0]
 
     # Get each set of parallel planes
     plane_sets = [ PlaneSet(e, offsets[i], i, k_ranges[i]) for (i, e) in enumerate(basis) ]
@@ -387,60 +321,3 @@ def dualgrid_method(basis_obj, k_ranges=None, offsets=None, shape_accuracy=DEFAU
                     rhombohedra[volume].append(r)
 
     return rhombohedra, possible_cells
-
-def render_rhombohedra(ax, rhombohedra, colormap_str, render_distance=RENDER_DISTANCE, coi=None, fast_render_dist_checks=False):
-    """ Renders rhombohedra with matplotlib
-    """
-    clrmap = cm.get_cmap(colormap_str)
-
-    if type(coi) == type(None):
-        # Find centre of interest
-        print("Finding COI")
-        all_verts = []
-        for volume, rhombs in rhombohedra.items():
-            for r in rhombs:
-                for v in r.verts:
-                    all_verts.append(v)
-        coi = np.mean(all_verts, axis=0)  # centre of interest is mean of all the vertices
-
-    for volume, rhombs in rhombohedra.items():
-        color = clrmap(volume)
-
-        for r in rhombs:
-            inside_render = False
-            if RENDER_DISTANCE_TYPE == "cubic":
-                inside_render = r.is_inside_box(render_distance, centre=coi, fast=fast_render_dist_checks)
-            else:  # Defaults to spherical
-                inside_render = r.is_within_radius(render_distance, centre=coi, fast=fast_render_dist_checks)
-
-            if inside_render:
-                faces = r.get_faces()
-                shape_col = Poly3DCollection(faces, facecolors=color, linewidths=0.2, edgecolors="k", alpha=SHAPE_OPACITY)
-                ax.add_collection(shape_col)
-
-    # Set axis scaling equal and display
-    world_limits = ax.get_w_lims()
-    ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
-
-    axes_bounds = [
-        coi - np.array([RENDER_DISTANCE, RENDER_DISTANCE, RENDER_DISTANCE]),  # Lower
-        coi + np.array([RENDER_DISTANCE, RENDER_DISTANCE, RENDER_DISTANCE])  # Upper
-    ]
-    ax.set_xlim(axes_bounds[0][0], axes_bounds[1][0])
-    ax.set_ylim(axes_bounds[0][1], axes_bounds[1][1])
-    ax.set_zlim(axes_bounds[0][2], axes_bounds[1][2])
-
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
-
-    return coi
-
-if __name__ == "__main__":
-    get_basis = icosahedral_basis
-    basis_obj = get_basis()
-    ax = plt.axes(projection="3d")
-
-    rhombohedra, _possible_cells = dualgrid_method(basis_obj)
-    render_rhombohedra(ax, rhombohedra, "ocean")
-    plt.show()
