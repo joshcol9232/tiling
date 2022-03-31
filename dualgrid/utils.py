@@ -53,20 +53,31 @@ def hexagonal_basis():
     ]), 3)
 
 
-""" Filtering functions. Must take form (point, scaling_param, kwargs)
+""" Filtering functions. Must take form (point, filter_centre, param_1, param_2, ..., param_N)
 """
-def is_point_within_radius(r, radius, centre=np.zeros(3)):
-    return np.linalg.norm(r - centre) < radius
+def is_point_within_radius(r, filter_centre, radius):
+    return np.linalg.norm(r - filter_centre) < radius
 
-def is_point_within_cube(r, size, centre=np.zeros(3)):
-    d = r - centre
+def is_point_within_cube(r, filter_centre, size):
+    d = r - filter_centre
     sizediv2 = size/2.0
     return abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2
+
+def get_centre_of_interest(rhombohedra):
+    """ Used to centre the camera/filter on the densest part of the generated crystal.
+    """
+    all_verts = []
+    for volume, rhombs in rhombohedra.items():
+        for r in rhombs:
+            for v in r.verts:
+                all_verts.append(v)
+
+    return np.mean(all_verts, axis=0)  # centre of interest is mean of all the vertices
 
 """ Graph
 """
 
-def verts_and_edges_from_rhombs(rhombs, filter_args=[], filter=None, coi=np.zeros(3)):
+def verts_and_edges_from_rhombs(rhombs, filter_args=[], filter=None, filter_centre=np.zeros(3)):
     """ Returns a list of all vertices and edges with no duplicates, given a
         dictionary of cells.
         Takes a function to filter out points with, along with it's arguments
@@ -82,7 +93,7 @@ def verts_and_edges_from_rhombs(rhombs, filter_args=[], filter=None, coi=np.zero
                 # Check vertex inside filtering distance
                 in_range = True
                 if filter:  # If a filtering function is given, then filter out the point
-                    in_range = filter(rhomb.verts[arr_index], *filter_args)
+                    in_range = filter(rhomb.verts[arr_index], filter_centre, *filter_args)
 
                 if in_range and i not in unique_indices:
                     unique_indices.append(i)
@@ -104,55 +115,43 @@ def render_rhombohedra(
         ax,
         rhombohedra,
         colormap_str,
-        filter_distance=None,
-        filtering_type="spherical",   # Choices are: spherical, cubic
-        fast_render_dist_checks=False,
+        filter=None,
+        filter_centre=None,
+        filter_args=[],
+        fast_render_dist_checks=False, # False: checks 1 node per rhombohedron, fast checks all 8 are within range
         shape_opacity=0.6,
-        coi=None,
+        axis_size=10.0,
 ):
     """ Renders rhombohedra with matplotlib
     """
     clrmap = cm.get_cmap(colormap_str)
 
-    if type(coi) == type(None):
+    if not filter_centre:
         # Find centre of interest
-        all_verts = []
-        for volume, rhombs in rhombohedra.items():
-            for r in rhombs:
-                for v in r.verts:
-                    all_verts.append(v)
-        coi = np.mean(all_verts, axis=0)  # centre of interest is mean of all the vertices
+        filter_centre = get_centre_of_interest(rhombohedra)
 
     for volume, rhombs in rhombohedra.items():
         color = clrmap(volume)
 
-        if type(filter_distance) == type(None):
-            for r in rhombs:
+        for r in rhombs:
+            in_render = True
+            # apply filter if there is one
+            if filter:
+                in_render = r.is_in_filter(filter, filter_centre, filter_args, fast=fast_render_dist_checks)
+
+            if in_render:
                 faces = r.get_faces()
                 shape_col = Poly3DCollection(faces, facecolors=color, linewidths=0.2, edgecolors="k", alpha=shape_opacity)
                 ax.add_collection(shape_col)
-            filter_distance = 10.0  # Default render distance used for setting axis limits later
 
-        else:
-            for r in rhombs:
-                inside_render = False
-                if filtering_type == "cubic":
-                    inside_render = r.is_inside_box(filter_distance, centre=coi, fast=fast_render_dist_checks)
-                else:  # Defaults to spherical
-                    inside_render = r.is_within_radius(filter_distance, centre=coi, fast=fast_render_dist_checks)
-
-                if inside_render:
-                    faces = r.get_faces()
-                    shape_col = Poly3DCollection(faces, facecolors=color, linewidths=0.2, edgecolors="k", alpha=shape_opacity)
-                    ax.add_collection(shape_col)
 
     # Set axis scaling equal and display
     world_limits = ax.get_w_lims()
     ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
 
     axes_bounds = [
-        coi - np.array([filter_distance, filter_distance, filter_distance]),  # Lower
-        coi + np.array([filter_distance, filter_distance, filter_distance])  # Upper
+        filter_centre - np.array([axis_size, axis_size, axis_size]),  # Lower
+        filter_centre + np.array([axis_size, axis_size, axis_size])  # Upper
     ]
     ax.set_xlim(axes_bounds[0][0], axes_bounds[1][0])
     ax.set_ylim(axes_bounds[0][1], axes_bounds[1][1])
@@ -162,7 +161,7 @@ def render_rhombohedra(
     ax.set_ylabel("y")
     ax.set_zlabel("z")
 
-    return coi
+    return filter_centre
 
 """ STL Output
 """
@@ -172,16 +171,16 @@ def generate_wire_mesh(
         vertex_radius=None,
         mesh_min_length=0.005,   # Arbitrary defaults
         mesh_max_length=0.05,
-        filter_args=[2.0],
         filter=is_point_within_cube,
-        coi=np.zeros(3),
+        filter_centre=np.zeros(3),
+        filter_args=[2.0],
         **kwargs
 ):
     # Make wiremesh and saves to stl file
     if not vertex_radius:
         vertex_radius = wire_radius
 
-    verts, edges = verts_and_edges_from_rhombs(rhombs, filter=filter, filter_args=filter_args, coi=coi)
+    verts, edges = verts_and_edges_from_rhombs(rhombs, filter=filter, filter_centre=filter_centre, filter_args=filter_args)
 
     cylinders = []
     balls = []

@@ -245,31 +245,16 @@ class Rhombahedron:
 
         return edges
 
-    # TODO: REMOVE these two functions
-    def is_within_radius(self, radius, fast=False, centre=np.zeros(3)):
+    def is_in_filter(self, filter, filter_centre, filter_args, fast=False):
         """ Utility function for checking whever the rhombohedron is in rendering distance
-        `fast` just checks the first vertex
+        `fast` just checks the first vertex and exits, otherwise if any of the vertices are inside the filter
+        then the whole rhombahedron is inside filter
         """
-        # If any of the vertices are within range, then say yes
         if fast:
-            return np.linalg.norm(self.verts[0] - centre) < radius
+            return filter(self.verts[0], filter_centre, *filter_args)
         else:
             for v in self.verts:
-                if np.linalg.norm(v - centre) < radius:
-                    return True
-
-    def is_inside_box(self, size, fast=False, centre=np.zeros(3)):
-        """ Checks if any of the vertices are within a box of size given with centre given
-        `fast` just checks 1 vertex of the rhombus
-        """
-        sizediv2 = size / 2
-        if fast:
-            d = self.verts[0] - centre
-            return abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2
-        else:
-            for v in self.verts:
-                d = v - centre
-                if abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2: # simple axis aligned cube collision
+                if filter(v, filter_centre, *filter_args):
                     return True
 
 

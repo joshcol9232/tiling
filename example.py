@@ -18,7 +18,7 @@ k_ranges = [
 filt_dist = 3.0
 
 rhombohedra, _possible_cells = dg.dualgrid_method(basis_obj, k_ranges=3)
-dg.utils.render_rhombohedra(ax, rhombohedra, "ocean", filter_distance=filt_dist, filtering_type="cubic")
+dg.utils.render_rhombohedra(ax, rhombohedra, "ocean", filter=dg.utils.is_point_within_cube, filter_args=[2.0])
 plt.show()
 
 print("Generating mesh...")
