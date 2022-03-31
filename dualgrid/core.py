@@ -3,6 +3,31 @@ import time
 
 DEFAULT_K_RANGE = 3
 
+# Some definitions for each rhombohedron
+FACE_INDICES = np.array([  # Faces of every rhombohedron (ACW order). Worked out on paper
+    [0, 2, 3, 1],
+    [0, 1, 5, 4],
+    [5, 7, 6, 4],
+    [2, 6, 7, 3],
+    [0, 4, 6, 2],
+    [3, 7, 5, 1]
+])
+
+EDGES = np.array([  # Connections between neighbours for every cell
+    [0, 2],
+    [2, 3],
+    [3, 1],
+    [1, 0],
+    [4, 6],
+    [6, 7],
+    [7, 5],
+    [5, 4],
+    [0, 4],
+    [1, 5],
+    [3, 7],
+    [2, 6]
+])
+
 class PlaneSet:
     def __init__(self, normal, offset, setnum, k_range):
         self.normal = normal
@@ -189,31 +214,6 @@ class Basis:
         return shapes
 
 """ MAIN ALGORITHM """
-# Some definitions for each rhombohedron
-FACE_INDICES = [  # Faces of every rhombohedron (ACW order). Worked out on paper
-    [0, 2, 3, 1],
-    [0, 1, 5, 4],
-    [5, 7, 6, 4],
-    [2, 6, 7, 3],
-    [0, 4, 6, 2],
-    [3, 7, 5, 1]
-]
-
-EDGES = [  # Connections between neighbours for every cell
-    [0, 2],
-    [2, 3],
-    [3, 1],
-    [1, 0],
-    [4, 6],
-    [6, 7],
-    [7, 5],
-    [5, 4],
-    [0, 4],
-    [1, 5],
-    [3, 7],
-    [2, 6]
-]
-
 class Rhombahedron:
     def __init__(self, vertices, indices, parent_sets):
         self.verts = vertices
@@ -236,6 +236,16 @@ class Rhombahedron:
 
         return faces
 
+    def get_edges(self):
+        """ Returns unordered list of edges
+        """
+        edges = []
+        for edge in EDGES:
+            edges.append([self.verts[edge[0]], self.verts[edge[1]]])
+
+        return edges
+
+    # TODO: REMOVE these two functions
     def is_within_radius(self, radius, fast=False, centre=np.zeros(3)):
         """ Utility function for checking whever the rhombohedron is in rendering distance
         `fast` just checks the first vertex

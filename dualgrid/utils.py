@@ -3,7 +3,7 @@ import dualgrid as dg
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib import cm
 import matplotlib.pyplot as plt
-
+import pygmsh
 
 """ BASES
     Various pre-defined bases to play around with
@@ -53,14 +53,59 @@ def hexagonal_basis():
     ]), 3)
 
 
+""" Filtering functions. Must take form (point, scaling_param, kwargs)
+"""
+def is_point_within_radius(r, radius, centre=np.zeros(3)):
+    return np.linalg.norm(r - centre) < radius
+
+def is_point_within_cube(r, size, centre=np.zeros(3)):
+    d = r - centre
+    sizediv2 = size/2.0
+    return abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2
+
+""" Graph
+"""
+
+def verts_and_edges_from_rhombs(rhombs, filter_args=[], filter=None, coi=np.zeros(3)):
+    """ Returns a list of all vertices and edges with no duplicates, given a
+        dictionary of cells.
+        Takes a function to filter out points with, along with it's arguments
+    """
+    unique_indices = []  # Edges will be when distance between indices is 1
+    verts = []
+    edges = []
+
+    for _vol, rhombs in rhombs.items():
+        for rhomb in rhombs:
+            for arr_index, i in enumerate(rhomb.indices):
+                i = list(i)
+                # Check vertex inside filtering distance
+                in_range = True
+                if filter:  # If a filtering function is given, then filter out the point
+                    in_range = filter(rhomb.verts[arr_index], *filter_args)
+
+                if in_range and i not in unique_indices:
+                    unique_indices.append(i)
+                    verts.append(rhomb.verts[arr_index])
+
+    # Indices with distance 1 are edges
+    for i in range(len(unique_indices)-1):
+        for j in range(i+1, len(unique_indices)):
+            if np.linalg.norm(np.array(unique_indices[j]) - np.array(unique_indices[i])) == 1:
+                # linked
+                edges.append([i, j])
+
+    return verts, edges
+
+
 """ RENDERING
 """
 def render_rhombohedra(
         ax,
         rhombohedra,
         colormap_str,
-        render_distance=None,
-        render_distance_type="spherical",   # Choices are: spherical, cubic
+        filter_distance=None,
+        filtering_type="spherical",   # Choices are: spherical, cubic
         fast_render_dist_checks=False,
         shape_opacity=0.6,
         coi=None,
@@ -71,7 +116,6 @@ def render_rhombohedra(
 
     if type(coi) == type(None):
         # Find centre of interest
-        print("Finding COI")
         all_verts = []
         for volume, rhombs in rhombohedra.items():
             for r in rhombs:
@@ -82,20 +126,20 @@ def render_rhombohedra(
     for volume, rhombs in rhombohedra.items():
         color = clrmap(volume)
 
-        if type(render_distance) == type(None):
+        if type(filter_distance) == type(None):
             for r in rhombs:
                 faces = r.get_faces()
                 shape_col = Poly3DCollection(faces, facecolors=color, linewidths=0.2, edgecolors="k", alpha=shape_opacity)
                 ax.add_collection(shape_col)
-            render_distance = 10.0  # Default render distance used for setting axis limits later
+            filter_distance = 10.0  # Default render distance used for setting axis limits later
 
         else:
             for r in rhombs:
                 inside_render = False
-                if render_distance_type == "cubic":
-                    inside_render = r.is_inside_box(render_distance, centre=coi, fast=fast_render_dist_checks)
+                if filtering_type == "cubic":
+                    inside_render = r.is_inside_box(filter_distance, centre=coi, fast=fast_render_dist_checks)
                 else:  # Defaults to spherical
-                    inside_render = r.is_within_radius(render_distance, centre=coi, fast=fast_render_dist_checks)
+                    inside_render = r.is_within_radius(filter_distance, centre=coi, fast=fast_render_dist_checks)
 
                 if inside_render:
                     faces = r.get_faces()
@@ -107,8 +151,8 @@ def render_rhombohedra(
     ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
 
     axes_bounds = [
-        coi - np.array([render_distance, render_distance, render_distance]),  # Lower
-        coi + np.array([render_distance, render_distance, render_distance])  # Upper
+        coi - np.array([filter_distance, filter_distance, filter_distance]),  # Lower
+        coi + np.array([filter_distance, filter_distance, filter_distance])  # Upper
     ]
     ax.set_xlim(axes_bounds[0][0], axes_bounds[1][0])
     ax.set_ylim(axes_bounds[0][1], axes_bounds[1][1])
@@ -119,3 +163,59 @@ def render_rhombohedra(
     ax.set_zlabel("z")
 
     return coi
+
+""" STL Output
+"""
+def generate_wire_mesh(
+        rhombs,
+        wire_radius=0.1,
+        vertex_radius=None,
+        mesh_min_length=0.005,   # Arbitrary defaults
+        mesh_max_length=0.05,
+        filter_args=[2.0],
+        filter=is_point_within_cube,
+        coi=np.zeros(3),
+        **kwargs
+):
+    # Make wiremesh and saves to stl file
+    if not vertex_radius:
+        vertex_radius = wire_radius
+
+    verts, edges = verts_and_edges_from_rhombs(rhombs, filter=filter, filter_args=filter_args, coi=coi)
+
+    cylinders = []
+    balls = []
+
+    with pygmsh.occ.Geometry() as geom:       # Use CAD-like commands
+        geom.characteristic_length_max = mesh_max_length
+        geom.characteristic_length_min = mesh_min_length
+
+        for v in verts:
+            balls.append(geom.add_ball(v, vertex_radius))
+
+        for e in edges:
+            axial_vec = verts[e[1]] - verts[e[0]]
+            # cyl = geom.add_cylinder(verts[e[0]] + (axial_vec * wire_radius/2.0), axial_vec - (axial_vec * wire_radius/2.0), wire_radius)
+            cyl = geom.add_cylinder(verts[e[0]], axial_vec, wire_radius)
+            # total = geom.boolean_union([ total, cyl ])
+            cylinders.append(cyl)
+
+        print("Unifying cylinders...")
+        #geom.boolean_union(cylinders)
+        print("Unifying balls...")
+        #geom.boolean_union(balls)
+
+        mesh = geom.generate_mesh(**kwargs)
+
+    return mesh
+
+def generate_solid_mesh(rhombs, **kwargs):
+    with pygmsh.geo.Geometry() as geom:
+        for cell_type in rhombs.values():
+            for r in cell_type:
+                for face in r.get_faces():
+                    geom.add_polygon(face, mesh_size=0.1)
+
+        mesh = geom.generate_mesh(**kwargs)
+
+    return mesh
