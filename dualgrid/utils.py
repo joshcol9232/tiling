@@ -128,7 +128,7 @@ def render_rhombohedra(
         filter=None,
         filter_centre=None,
         filter_args=[],
-        fast_render_dist_checks=False, # False: checks 1 node per rhombohedron, fast checks all 8 are within range
+        fast_filter=False, # False: checks 1 node per rhombohedron, fast checks all 8 are within range
         shape_opacity=0.6,
         axis_size=10.0,
 ):
@@ -148,7 +148,7 @@ def render_rhombohedra(
             in_render = True
             # apply filter if there is one
             if filter:
-                in_render = r.is_in_filter(filter, filter_centre, filter_args, fast=fast_render_dist_checks)
+                in_render = r.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter)
 
             if in_render:
                 faces = r.get_faces()
@@ -186,13 +186,16 @@ def generate_wire_mesh(
         filter_centre=np.zeros(3),
         filter_whole_cells=True,
         filter_args=[2.0],
+        fast_filter=False,
         **kwargs                # Keyword arguments to the mesh generator
 ):
     # Make wiremesh and saves to stl file
     if not vertex_radius:
         vertex_radius = wire_radius
 
-    verts, edges = verts_and_edges_from_rhombs(rhombs, filter=filter, filter_centre=filter_centre, filter_args=filter_args, filter_whole_cells=filter_whole_cells)
+    verts, edges = verts_and_edges_from_rhombs(rhombs, filter=filter, filter_centre=filter_centre, filter_args=filter_args, filter_whole_cells=filter_whole_cells, fast_filter=fast_filter)
+
+    print("CELL COUNT:", len(verts)//8)
 
     cylinders = []
     balls = []
@@ -212,6 +215,9 @@ def generate_wire_mesh(
             cylinders.append(cyl)
 
         mesh = geom.generate_mesh(**kwargs)
+
+
+    print("CELL COUNT:", len(verts)//8)
 
     return mesh
 
