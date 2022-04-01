@@ -77,7 +77,7 @@ def get_centre_of_interest(rhombohedra):
 """ Graph
 """
 
-def verts_and_edges_from_rhombs(rhombs, filter_args=[], filter=None, filter_centre=np.zeros(3)):
+def verts_and_edges_from_rhombs(rhombs, filter=None, filter_whole_cells=True, filter_args=[], filter_centre=np.zeros(3), fast_filter=False):
     """ Returns a list of all vertices and edges with no duplicates, given a
         dictionary of cells.
         Takes a function to filter out points with, along with it's arguments
@@ -88,16 +88,26 @@ def verts_and_edges_from_rhombs(rhombs, filter_args=[], filter=None, filter_cent
 
     for _vol, rhombs in rhombs.items():
         for rhomb in rhombs:
-            for arr_index, i in enumerate(rhomb.indices):
-                i = list(i)
-                # Check vertex inside filtering distance
-                in_range = True
-                if filter:  # If a filtering function is given, then filter out the point
-                    in_range = filter(rhomb.verts[arr_index], filter_centre, *filter_args)
+            if filter and filter_whole_cells:
+                # Check whole rhombahedron is in filter before continuing
+                include_rhomb = rhomb.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter)
+                if include_rhomb:
+                    for arr_index, i in enumerate(rhomb.indices):
+                        i = list(i)
+                        if i not in unique_indices:
+                            unique_indices.append(i)
+                            verts.append(rhomb.verts[arr_index])
+            else:
+                for arr_index, i in enumerate(rhomb.indices):
+                    i = list(i)
+                    # Check vertex inside filtering distance
+                    in_range = True
+                    if filter:  # If a filtering function is given, then filter out the point
+                        in_range = filter(rhomb.verts[arr_index], filter_centre, *filter_args)
 
-                if in_range and i not in unique_indices:
-                    unique_indices.append(i)
-                    verts.append(rhomb.verts[arr_index])
+                    if in_range and i not in unique_indices:
+                        unique_indices.append(i)
+                        verts.append(rhomb.verts[arr_index])
 
     # Indices with distance 1 are edges
     for i in range(len(unique_indices)-1):
@@ -123,6 +133,7 @@ def render_rhombohedra(
         axis_size=10.0,
 ):
     """ Renders rhombohedra with matplotlib
+    Has to filter whole cells due to the nature of the render.
     """
     clrmap = cm.get_cmap(colormap_str)
 
@@ -173,14 +184,15 @@ def generate_wire_mesh(
         mesh_max_length=0.05,
         filter=is_point_within_cube,
         filter_centre=np.zeros(3),
+        filter_whole_cells=True,
         filter_args=[2.0],
-        **kwargs
+        **kwargs                # Keyword arguments to the mesh generator
 ):
     # Make wiremesh and saves to stl file
     if not vertex_radius:
         vertex_radius = wire_radius
 
-    verts, edges = verts_and_edges_from_rhombs(rhombs, filter=filter, filter_centre=filter_centre, filter_args=filter_args)
+    verts, edges = verts_and_edges_from_rhombs(rhombs, filter=filter, filter_centre=filter_centre, filter_args=filter_args, filter_whole_cells=filter_whole_cells)
 
     cylinders = []
     balls = []
@@ -198,11 +210,6 @@ def generate_wire_mesh(
             cyl = geom.add_cylinder(verts[e[0]], axial_vec, wire_radius)
             # total = geom.boolean_union([ total, cyl ])
             cylinders.append(cyl)
-
-        print("Unifying cylinders...")
-        #geom.boolean_union(cylinders)
-        print("Unifying balls...")
-        #geom.boolean_union(balls)
 
         mesh = geom.generate_mesh(**kwargs)
 

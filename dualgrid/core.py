@@ -257,6 +257,8 @@ class Rhombahedron:
                 if filter(v, filter_centre, *filter_args):
                     return True
 
+            return False
+
 
 def dualgrid_method(basis_obj, k_ranges=None, offsets=None, random=True, shape_accuracy=4):
     """ de Bruijn dual grid method.
