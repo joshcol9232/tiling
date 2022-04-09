@@ -58,6 +58,7 @@ class PlaneSet:
             coef.append(other.normal)
 
         coef = np.matrix(coef)
+        print("COEF_NEW:", coef)
 
         # Check for singular matrix
         if np.linalg.det(coef) == 0:
@@ -77,8 +78,7 @@ class PlaneSet:
         base_offsets = np.array(base_offsets)
 
         ds = k_combos + base_offsets # remaining part of cartesian form (d)
-        # ds = ds.reshape((-1, len(base_offsets), 1)) # Reshape for matrix multiplication
-        intersections = np.tensordot(coef, ds, axes=(0, 1)).T
+        intersections = np.asarray( (coef_inv * np.asmatrix(ds).T).T )
 
         return intersections, k_combos
 
@@ -99,6 +99,7 @@ class PlaneSet:
             other1.normal,
             other2.normal
         ])
+        print("COEF OLD:", coef)
 
         # Check for singular matrix
         if np.linalg.det(coef) == 0:
@@ -312,8 +313,11 @@ def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accur
     possible_cells = basis_obj.get_possible_cells(shape_accuracy)
     basis = basis_obj.vecs
 
-    if type(offsets) == type(None):
+    if not offsets:
         offsets = basis_obj.get_offsets(random)
+        print("GENERATED OFFSETS:", offsets)
+
+    print("OFFSETS:", offsets)
 
     # Get each set of parallel planes
     plane_sets = [ PlaneSet(e, offsets[i], i, k_range) for (i, e) in enumerate(basis) ]
@@ -358,4 +362,4 @@ def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accur
     print("Total rhombs:", total_rhombs)
     print("Total intersections:", total_intersections)
 
-    return rhombohedra, possible_cells, np.array(all_intersections)
+    return rhombohedra, possible_cells, np.array(all_intersections), offsets

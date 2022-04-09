@@ -2,7 +2,7 @@ import dualgrid as dg
 import matplotlib.pyplot as plt
 
 # Make a Basis object. There are some presets available in the `utils`.
-basis_obj = dg.utils.penrose_basis()
+basis_obj = dg.utils.hexagonal_basis()
 # Set up matplotlib axes.
 ax = plt.axes(projection="3d")
 
@@ -16,11 +16,11 @@ filt_dist = 2.0
 # `rhombohedra` -> A dictionary of { cell volume: [ generated rhombohedra, ... ], ... }.
 # `possible_cells` -> All of the possible cell volumes you can generate with the given basis.
 
-old_rhombohedra, _possible_cells, old_intersections = dg.dualgrid_method(basis_obj, k_range=1, old=True)
+old_rhombohedra, _possible_cells, old_intersections, offsets = dg.dualgrid_method(basis_obj, k_range=2, old=True)
 old_verts, old_edges = dg.utils.verts_and_edges_from_rhombs(old_rhombohedra, filter=dg.utils.is_point_within_cube, filter_args=[filt_dist])
 print("Generated old rhombohedra.")
 
-new_rhombohedra, _possible_cells, new_intersections = dg.dualgrid_method(basis_obj, k_range=1, old=False)
+new_rhombohedra, _possible_cells, new_intersections, _offsets = dg.dualgrid_method(basis_obj, k_range=2, old=False, offsets=offsets)
 new_verts, new_edges = dg.utils.verts_and_edges_from_rhombs(new_rhombohedra, filter=dg.utils.is_point_within_cube, filter_args=[filt_dist])
 
 print("Generated rhombohedra.")
