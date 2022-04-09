@@ -36,8 +36,9 @@ def hypercubic_basis():
     ]), 4)
 
 def penrose_basis():
-    penrose = [np.array([np.cos(j * np.pi * 2.0 / 5.0), np.sin(j * np.pi * 2.0 / 5.0)]) for j in range(5)]
-    return dg.Basis(np.array(penrose), 2, sum_to_zero=True)
+    penrose = [np.array([np.cos(j * np.pi * 2.0 / 5.0), np.sin(j * np.pi * 2.0 / 5.0), 0.0]) for j in range(5)]
+    penrose.append(np.array([0.0, 0.0, 1.0]))
+    return dg.Basis(np.array(penrose), 3, sum_to_zero=True)
 
 def ammann_basis():
     am = [np.array([np.cos(j * np.pi * 2.0 / 8.0), np.sin(j * np.pi * 2.0 / 8.0)]) for j in range(4)]

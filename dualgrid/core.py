@@ -62,7 +62,7 @@ class PlaneSet:
         # Check for singular matrix
         if np.linalg.det(coef) == 0:
             print("WARNING: Unit vectors form singular matrices.")
-            return []
+            return [], []
 
         # inverse of coefficient matrix
         coef_inv = np.linalg.inv(coef)
@@ -92,7 +92,7 @@ class PlaneSet:
         # Checks:
         if np.dot(self.normal, np.cross(other1.normal, other2.normal)) == 0:
             print("WARNING: Sets (%s, %s, %s) may not cross at single points." % (self.setnum, other1.setnum, other2.setnum))
-            return []
+            return [], []
 
         coef = np.matrix([
             self.normal,
@@ -103,7 +103,7 @@ class PlaneSet:
         # Check for singular matrix
         if np.linalg.det(coef) == 0:
             print("WARNING: Unit vectors form singular matrices.")
-            return []
+            return [], []
 
         # inverse of coefficient matrix
         coef_inv = np.linalg.inv(coef)
@@ -125,7 +125,7 @@ class PlaneSet:
                     xyz = np.matmul(coef_inv, ds)
                     intersections.append(np.array([xyz[0, 0], xyz[1, 0], xyz[2, 0]]))
 
-        return intersections, k_combos
+        return np.array(intersections), k_combos
 
 def realspace(indices, basis):
     out = np.zeros(3, dtype=float)
@@ -322,15 +322,21 @@ def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accur
     for possible_volume in possible_cells.keys():
         rhombohedra[possible_volume] = []
 
+    total_intersections = 0
+    total_rhombs = 0
+    all_intersections = []
+
     # Find intersections between each of the plane sets
     for js in itertools.combinations(range(len(plane_sets)), basis_obj.dimensions):
         if old:
             intersections, k_combos = plane_sets[js[0]].old_get_intersections_with(k_range, plane_sets[js[1]], plane_sets[js[2]])
         else:
             intersections, k_combos = plane_sets[js[0]].get_intersections_with(k_range, [plane_sets[js[1]], plane_sets[js[2]]])
-        # DEBUG print("Intersections between plane sets p:%s, q:%s, r:%s : %d" % (p, q, r, len(intersections)))
-        print("INTERSECTIONS:", intersections)
+        print("Intersections between plane sets %s : %d" % (js, len(intersections)))
+
+        total_intersections += len(intersections)
         for i, intersection in enumerate(intersections):
+            all_intersections.append(intersection)
             # Calculate neighbours for this intersection
             indices_set = get_neighbours(intersection, js, k_combos[i], basis, offsets)
             vertices_set = []
@@ -342,9 +348,14 @@ def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accur
 
             vertices_set = np.array(vertices_set)
             r = Rhombahedron(vertices_set, indices_set, js)
+            total_rhombs += 1
             # Get volume and append to appropriate rhombohedra list
             volume = r.get_volume()
             volume = np.around(volume, shape_accuracy)
             rhombohedra[volume].append(r)
 
-    return rhombohedra, possible_cells
+
+    print("Total rhombs:", total_rhombs)
+    print("Total intersections:", total_intersections)
+
+    return rhombohedra, possible_cells, np.array(all_intersections)
