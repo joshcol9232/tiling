@@ -2,7 +2,7 @@ import dualgrid as dg
 import matplotlib.pyplot as plt
 
 # Make a Basis object. There are some presets available in the `utils`.
-basis_obj = dg.utils.icosahedral_basis()
+basis_obj = dg.utils.cubic_basis()
 # Set up matplotlib axes.
 ax = plt.axes(projection="3d")
 
@@ -11,7 +11,7 @@ ax = plt.axes(projection="3d")
 # The function outputs:
 # `rhombohedra` -> A dictionary of { cell volume: [ generated rhombohedra, ... ], ... }.
 # `possible_cells` -> All of the possible cell volumes you can generate with the given basis.
-rhombohedra, _possible_cells = dg.dualgrid_method(basis_obj, k_ranges=1)
+rhombohedra, _possible_cells = dg.dualgrid_method(basis_obj, k_range=2)
 print("Generated rhombohedra.")
 
 # Set the filtering distance. In this example we will take a 1x1 cube out of the centre of the

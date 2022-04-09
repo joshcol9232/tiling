@@ -1,10 +1,10 @@
 import numpy as np
 import time
+import itertools
 
-DEFAULT_K_RANGE = 3
 
-# Some definitions for each 3D rhombohedron
-FACE_INDICES_3D = np.array([  # Faces of every rhombohedron (ACW order). Worked out on paper
+# Some definitions for each rhombohedron
+FACE_INDICES = np.array([  # Faces of every rhombohedron (ACW order). Worked out on paper
     [0, 2, 3, 1],
     [0, 1, 5, 4],
     [5, 7, 6, 4],
@@ -13,7 +13,7 @@ FACE_INDICES_3D = np.array([  # Faces of every rhombohedron (ACW order). Worked 
     [3, 7, 5, 1]
 ])
 
-EDGES_3D = np.array([  # Connections between neighbours for every cell
+EDGES = np.array([  # Connections between neighbours for every cell
     [0, 2],
     [2, 3],
     [3, 1],
@@ -28,6 +28,10 @@ EDGES_3D = np.array([  # Connections between neighbours for every cell
     [2, 6]
 ])
 
+
+def _get_k_combos(k_range, dimensions):
+    return np.array(list(itertools.product(*[ [k for k in range(1-k_range, k_range)] for _d in range(dimensions) ])))
+
 class PlaneSet:
     def __init__(self, normal, offset, setnum, k_range):
         self.normal = normal
@@ -41,17 +45,20 @@ class PlaneSet:
         """
         return self.normal + self.normal * (self.offset + k)
 
+
     def get_intersections_with(self, k_range, others):
         """
         If this plane intersects with two other planes at a point, this function
         will return the location of this intersection in real space.
         """
    
+        dimensions = len(others) + 1
         coef = [self.normal] # Cartesian coefficients. E.g ax + by + cz = d. a, b, c
         for other in others:
             coef.append(other.normal)
 
         coef = np.matrix(coef)
+        print("Coef:", coef)
 
         # Check for singular matrix
         if np.linalg.det(coef) == 0:
@@ -63,18 +70,23 @@ class PlaneSet:
 
         intersections = []
 
-        k_combos = np.array(_get_combos(k_range, len(others)+1))
+        k_combos = _get_k_combos(k_range, dimensions)
 
+        print("K COMBOS:", k_combos)
         base_offsets = [self.offset]  # Offsets, then + [integers] to get specific planes within set
         for other in others:
             base_offsets.append(other.offset)
         base_offsets = np.array(base_offsets)
+        print("BASE OFFSETS:", base_offsets)
 
         ds = k_combos + base_offsets # remaining part of cartesian form (d)
-        ds = ds.reshape((-1, len(base_offsets), 1)) # Reshape for matrix multiplication
-        intersections = coef_inv * ds
+        print("ds:", ds)
+        # ds = ds.reshape((-1, len(base_offsets), 1)) # Reshape for matrix multiplication
+        intersections = np.tensordot(coef, ds, axes=(0, 1)).T
 
         print("Intersections:", intersections)
+        return intersections, k_combos
+
 
 
 def realspace(indices, basis):
@@ -93,7 +105,7 @@ def gridspace(r, basis, offsets):
     return out
 
 
-def get_neighbours(intersection, basis, offsets):
+def get_neighbours(intersection, js, ks, basis, offsets):
     directions = np.array([   # Each possible neighbour of intersection. Derived from eq. 4.5 in de Bruijn paper
         [0, 0, 0],
         [0, 1, 0],
@@ -106,12 +118,12 @@ def get_neighbours(intersection, basis, offsets):
         [1, 1, 1]
     ])
 
-    indices = gridspace(intersection["location"], basis, offsets)
+    indices = gridspace(intersection, basis, offsets)
 
     # DEBUG print("Root indices before loading:", indices)
     # Load known indices into indices array
-    for index, j in enumerate(intersection["js"]):
-        indices[j] = intersection["ks"][index]
+    for index, j in enumerate(js):
+        indices[j] = ks[index]
 
     # DEBUG print("Getting neighbours for:", intersection)
     # DEBUG print("Root indices:", indices)
@@ -119,9 +131,9 @@ def get_neighbours(intersection, basis, offsets):
     neighbours = [ np.array([ v for v in indices ]) for _i in range(8) ]
 
     # Quick note: Kronecker delta function -> (i == j) = False (0) or True (1) in python. Multiplication of bool is allowed
-    delta1 = np.array([ (j == intersection["js"][0]) * 1 for j in range(len(basis)) ])
-    delta2 = np.array([ (j == intersection["js"][1]) * 1 for j in range(len(basis)) ])
-    delta3 = np.array([ (j == intersection["js"][2]) * 1 for j in range(len(basis)) ])
+    delta1 = np.array([ (j == js[0]) * 1 for j in range(len(basis)) ])
+    delta2 = np.array([ (j == js[1]) * 1 for j in range(len(basis)) ])
+    delta3 = np.array([ (j == js[2]) * 1 for j in range(len(basis)) ])
 
     # Apply equation 4.5 in de Bruijn's paper 1, expanded for any basis len and extra third dimension
     for i, e in enumerate(directions): # Corresponds to epsilon in paper
@@ -148,9 +160,9 @@ def triple_product(a, b, c):
 
 
 class Basis:
-    def __init__(self, vecs, sum_to_zero=False):
+    def __init__(self, vecs, dimensions, sum_to_zero=False):
         self.vecs = vecs
-        self.dimensions = len(vecs[0])
+        self.dimensions = dimensions
         self.is_2d = dimensions % 2 == 0
         self.sum_to_zero = sum_to_zero
 
@@ -187,7 +199,6 @@ class Basis:
     def get_possible_cells(self, decimals):
         """ Function that finds all possible cell shapes in the final mesh.
             Number of decimal places required for finite hash keys (floats are hard to == )
-
             Returns a dictionary of volume : [all possible combinations of basis vector to get that volume]
         """
         shapes = {}  # volume : set indices
@@ -205,19 +216,19 @@ class Basis:
         return shapes
 
 """ MAIN ALGORITHM """
-class Cell:
+class Rhombahedron:
     def __init__(self, vertices, indices, parent_sets):
         self.verts = vertices
         self.indices = indices
         self.parent_sets = parent_sets
 
     def __repr__(self):
-        return "Cell(%s parents %s)" % (self.indices[0], self.parent_sets)
+        return "Rhombahedron(%s parents %s)" % (self.indices[0], self.parent_sets)
 
-    # def get_size(self): # General for every rhombahedron given that vertices are generated the same way every time (they are due to get_neighbours function)
-    #     return abs(triple_product(self.verts[1] - self.verts[0], self.verts[2] - self.verts[0], self.verts[4] - self.verts[0]))
+    def get_volume(self): # General for every rhombahedron given that vertices are generated the same way every time (they are due to get_neighbours function)
+        return abs(triple_product(self.verts[1] - self.verts[0], self.verts[2] - self.verts[0], self.verts[4] - self.verts[0]))
 
-    def get_faces_3D(self):
+    def get_faces(self):
         """ Returns the vertices of each face in draw order (ACW) for the rhombahedron
         """
         faces = np.zeros((6, 4, 3), dtype=float)
@@ -227,17 +238,14 @@ class Cell:
 
         return faces
 
-    def get_edges_3D(self):
+    def get_edges(self):
         """ Returns unordered list of edges
         """
         edges = []
-        for edge in EDGES_3D:
+        for edge in EDGES:
             edges.append([self.verts[edge[0]], self.verts[edge[1]]])
 
         return edges
-
-    def get_edges_2D(self):
-
 
     def is_in_filter(self, filter, filter_centre, filter_args, fast=False):
         """ Utility function for checking whever the rhombohedron is in rendering distance
@@ -254,13 +262,11 @@ class Cell:
             return False
 
 
-def dualgrid_method(basis_obj, k_ranges=None, offsets=None, random=True, shape_accuracy=4):
+def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accuracy=4):
     """ de Bruijn dual grid method.
     Generates and returns rhombohedra from basis given in the range given.
     Shape accuracy is the number of decimal places used to classify cell shapes
-
     Returns: rhombohedra, possible cell shapes
-
     :param basis_obj:
     :param k_ranges:
     :return:
@@ -271,18 +277,8 @@ def dualgrid_method(basis_obj, k_ranges=None, offsets=None, random=True, shape_a
     if type(offsets) == type(None):
         offsets = basis_obj.get_offsets(random)
 
-    # Get k range
-    if type(k_ranges) == int or type(k_ranges) == type(None):
-        k_range = DEFAULT_K_RANGE
-        if type(k_ranges) == int:  # Can input 3 for example, and get -3, -2, -1, 0, 1, 2, 3 as a range for each basis vec
-            k_range = k_ranges
-
-            k_ranges = [range(1 - k_range, k_range) for _i in range(len(basis))]
-            if basis_obj.is_2d:
-                k_ranges[-1] = [0]
-
     # Get each set of parallel planes
-    plane_sets = [ PlaneSet(e, offsets[i], i, k_ranges[i]) for (i, e) in enumerate(basis) ]
+    plane_sets = [ PlaneSet(e, offsets[i], i, k_range) for (i, e) in enumerate(basis) ]
 
     rhombohedra = {}
     for possible_volume in possible_cells.keys():
@@ -292,11 +288,12 @@ def dualgrid_method(basis_obj, k_ranges=None, offsets=None, random=True, shape_a
     for p in range(len(basis) - 2):
         for q in range(p+1, len(basis)-1):
             for r in range(q+1, len(basis)):
-                intersections = plane_sets[p].get_intersections_with(plane_sets[q], plane_sets[r])
+                js = [p, q, r]
+                intersections, k_combos = plane_sets[p].get_intersections_with(k_range, [plane_sets[q], plane_sets[r]])
                 # DEBUG print("Intersections between plane sets p:%s, q:%s, r:%s : %d" % (p, q, r, len(intersections)))
-                for i in intersections:
+                for i, intersection in enumerate(intersections):
                     # Calculate neighbours for this intersection
-                    indices_set = get_neighbours(i, basis, offsets)
+                    indices_set = get_neighbours(intersection, js, k_combos[i], basis, offsets)
                     vertices_set = []
 
                     for indices in indices_set:
@@ -305,7 +302,7 @@ def dualgrid_method(basis_obj, k_ranges=None, offsets=None, random=True, shape_a
                         vertices_set.append(vertex)
 
                     vertices_set = np.array(vertices_set)
-                    r = Rhombahedron(vertices_set, indices_set, i["js"])
+                    r = Rhombahedron(vertices_set, indices_set, js)
                     # Get volume and append to appropriate rhombohedra list
                     volume = r.get_volume()
                     volume = np.around(volume, shape_accuracy)
