@@ -58,7 +58,6 @@ class PlaneSet:
             coef.append(other.normal)
 
         coef = np.matrix(coef)
-        print("Coef:", coef)
 
         # Check for singular matrix
         if np.linalg.det(coef) == 0:
@@ -72,22 +71,61 @@ class PlaneSet:
 
         k_combos = _get_k_combos(k_range, dimensions)
 
-        print("K COMBOS:", k_combos)
         base_offsets = [self.offset]  # Offsets, then + [integers] to get specific planes within set
         for other in others:
             base_offsets.append(other.offset)
         base_offsets = np.array(base_offsets)
-        print("BASE OFFSETS:", base_offsets)
 
         ds = k_combos + base_offsets # remaining part of cartesian form (d)
-        print("ds:", ds)
         # ds = ds.reshape((-1, len(base_offsets), 1)) # Reshape for matrix multiplication
         intersections = np.tensordot(coef, ds, axes=(0, 1)).T
 
-        print("Intersections:", intersections)
         return intersections, k_combos
 
 
+
+    def old_get_intersections_with(self, k_range, other1, other2):
+        """
+        If this plane intersects with two other planes at a point, this function
+        will return the location of this intersection in real space.
+        """
+        # Checks:
+        if np.dot(self.normal, np.cross(other1.normal, other2.normal)) == 0:
+            print("WARNING: Sets (%s, %s, %s) may not cross at single points." % (self.setnum, other1.setnum, other2.setnum))
+            return []
+
+        coef = np.matrix([
+            self.normal,
+            other1.normal,
+            other2.normal
+        ])
+
+        # Check for singular matrix
+        if np.linalg.det(coef) == 0:
+            print("WARNING: Unit vectors form singular matrices.")
+            return []
+
+        # inverse of coefficient matrix
+        coef_inv = np.linalg.inv(coef)
+
+        intersections = []
+
+        k_combos = []
+
+        for k1 in range(1-k_range, k_range):
+            for k2 in range(1-k_range, k_range):
+                for k3 in range(1-k_range, k_range):
+                    k_combos.append([k1, k2, k3])
+                    # remaining part of cartesian form (d)
+                    ds = np.matrix([
+                        [self.offset + k1],
+                        [other1.offset + k2],
+                        [other2.offset + k3]
+                    ])  # Last row of the matrix -> i.e last element of cartesian form ax + bx + c = d, `d`
+                    xyz = np.matmul(coef_inv, ds)
+                    intersections.append(np.array([xyz[0, 0], xyz[1, 0], xyz[2, 0]]))
+
+        return intersections, k_combos
 
 def realspace(indices, basis):
     out = np.zeros(3, dtype=float)
@@ -262,7 +300,7 @@ class Rhombahedron:
             return False
 
 
-def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accuracy=4):
+def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accuracy=4, old=False):
     """ de Bruijn dual grid method.
     Generates and returns rhombohedra from basis given in the range given.
     Shape accuracy is the number of decimal places used to classify cell shapes
@@ -289,7 +327,10 @@ def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accur
         for q in range(p+1, len(basis)-1):
             for r in range(q+1, len(basis)):
                 js = [p, q, r]
-                intersections, k_combos = plane_sets[p].get_intersections_with(k_range, [plane_sets[q], plane_sets[r]])
+                if old:
+                    intersections, k_combos = plane_sets[p].old_get_intersections_with(k_range, plane_sets[q], plane_sets[r])
+                else:
+                    intersections, k_combos = plane_sets[p].get_intersections_with(k_range, [plane_sets[q], plane_sets[r]])
                 # DEBUG print("Intersections between plane sets p:%s, q:%s, r:%s : %d" % (p, q, r, len(intersections)))
                 for i, intersection in enumerate(intersections):
                     # Calculate neighbours for this intersection
