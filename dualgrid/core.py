@@ -3,8 +3,8 @@ import time
 
 DEFAULT_K_RANGE = 3
 
-# Some definitions for each rhombohedron
-FACE_INDICES = np.array([  # Faces of every rhombohedron (ACW order). Worked out on paper
+# Some definitions for each 3D rhombohedron
+FACE_INDICES_3D = np.array([  # Faces of every rhombohedron (ACW order). Worked out on paper
     [0, 2, 3, 1],
     [0, 1, 5, 4],
     [5, 7, 6, 4],
@@ -13,7 +13,7 @@ FACE_INDICES = np.array([  # Faces of every rhombohedron (ACW order). Worked out
     [3, 7, 5, 1]
 ])
 
-EDGES = np.array([  # Connections between neighbours for every cell
+EDGES_3D = np.array([  # Connections between neighbours for every cell
     [0, 2],
     [2, 3],
     [3, 1],
@@ -41,21 +41,17 @@ class PlaneSet:
         """
         return self.normal + self.normal * (self.offset + k)
 
-    def get_intersections_with(self, other1, other2):
+    def get_intersections_with(self, k_range, others):
         """
         If this plane intersects with two other planes at a point, this function
         will return the location of this intersection in real space.
         """
-        # Checks:
-        if np.dot(self.normal, np.cross(other1.normal, other2.normal)) == 0:
-            print("WARNING: Sets (%s, %s, %s) may not cross at single points." % (self.setnum, other1.setnum, other2.setnum))
-            return []
+   
+        coef = [self.normal] # Cartesian coefficients. E.g ax + by + cz = d. a, b, c
+        for other in others:
+            coef.append(other.normal)
 
-        coef = np.matrix([
-            self.normal,
-            other1.normal,
-            other2.normal
-        ])
+        coef = np.matrix(coef)
 
         # Check for singular matrix
         if np.linalg.det(coef) == 0:
@@ -67,23 +63,18 @@ class PlaneSet:
 
         intersections = []
 
-        for k1 in self.k_range:
-            for k2 in other1.k_range:
-                for k3 in other2.k_range:
-                    # remaining part of cartesian form (d)
-                    ds = np.matrix([
-                        [self.offset + k1],
-                        [other1.offset + k2],
-                        [other2.offset + k3]
-                    ])  # Last row of the matrix -> i.e last element of cartesian form ax + bx + c = d, `d`
-                    xyz = np.matmul(coef_inv, ds)
-                    intersections.append({   # Append information about the intersection
-                        "location": np.array([xyz[0, 0], xyz[1, 0], xyz[2, 0]]),   # column matrix -> vector
-                        "ks": [k1, k2, k3],
-                        "js": [self.setnum, other1.setnum, other2.setnum],
-                    })
+        k_combos = np.array(_get_combos(k_range, len(others)+1))
 
-        return intersections
+        base_offsets = [self.offset]  # Offsets, then + [integers] to get specific planes within set
+        for other in others:
+            base_offsets.append(other.offset)
+        base_offsets = np.array(base_offsets)
+
+        ds = k_combos + base_offsets # remaining part of cartesian form (d)
+        ds = ds.reshape((-1, len(base_offsets), 1)) # Reshape for matrix multiplication
+        intersections = coef_inv * ds
+
+        print("Intersections:", intersections)
 
 
 def realspace(indices, basis):
@@ -157,9 +148,9 @@ def triple_product(a, b, c):
 
 
 class Basis:
-    def __init__(self, vecs, dimensions, sum_to_zero=False):
+    def __init__(self, vecs, sum_to_zero=False):
         self.vecs = vecs
-        self.dimensions = dimensions
+        self.dimensions = len(vecs[0])
         self.is_2d = dimensions % 2 == 0
         self.sum_to_zero = sum_to_zero
 
@@ -214,19 +205,19 @@ class Basis:
         return shapes
 
 """ MAIN ALGORITHM """
-class Rhombahedron:
+class Cell:
     def __init__(self, vertices, indices, parent_sets):
         self.verts = vertices
         self.indices = indices
         self.parent_sets = parent_sets
 
     def __repr__(self):
-        return "Rhombahedron(%s parents %s)" % (self.indices[0], self.parent_sets)
+        return "Cell(%s parents %s)" % (self.indices[0], self.parent_sets)
 
-    def get_volume(self): # General for every rhombahedron given that vertices are generated the same way every time (they are due to get_neighbours function)
-        return abs(triple_product(self.verts[1] - self.verts[0], self.verts[2] - self.verts[0], self.verts[4] - self.verts[0]))
+    # def get_size(self): # General for every rhombahedron given that vertices are generated the same way every time (they are due to get_neighbours function)
+    #     return abs(triple_product(self.verts[1] - self.verts[0], self.verts[2] - self.verts[0], self.verts[4] - self.verts[0]))
 
-    def get_faces(self):
+    def get_faces_3D(self):
         """ Returns the vertices of each face in draw order (ACW) for the rhombahedron
         """
         faces = np.zeros((6, 4, 3), dtype=float)
@@ -236,14 +227,17 @@ class Rhombahedron:
 
         return faces
 
-    def get_edges(self):
+    def get_edges_3D(self):
         """ Returns unordered list of edges
         """
         edges = []
-        for edge in EDGES:
+        for edge in EDGES_3D:
             edges.append([self.verts[edge[0]], self.verts[edge[1]]])
 
         return edges
+
+    def get_edges_2D(self):
+
 
     def is_in_filter(self, filter, filter_centre, filter_args, fast=False):
         """ Utility function for checking whever the rhombohedron is in rendering distance

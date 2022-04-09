@@ -18,14 +18,14 @@ def icosahedral_basis():
         for n in range(5)
     ]
     icos.append(np.array([0.0, 0.0, 1.0]))
-    return dg.Basis(np.array(icos), 3)
+    return dg.Basis(np.array(icos))
 
 def cubic_basis():
     return dg.Basis(np.array([
         np.array([1.0, 0.0, 0.0]),
         np.array([0.0, 1.0, 0.0]),
         np.array([0.0, 0.0, 1.0])
-    ]), 3)
+    ]))
 
 def hypercubic_basis():
     return dg.Basis(np.array([
@@ -33,24 +33,22 @@ def hypercubic_basis():
         np.array([0.0, 1.0, 0.0, 0.0]),
         np.array([0.0, 0.0, 1.0, 0.0]),
         np.array([0.0, 0.0, 0.0, 1.0]),
-    ]), 4)
+    ]))
 
 def penrose_basis():
-    penrose = [np.array([np.cos(j * np.pi * 2.0 / 5.0), np.sin(j * np.pi * 2.0 / 5.0), 0.0]) for j in range(5)]
-    penrose.append(np.array([0.0, 0.0, 1.0]))
-    return dg.Basis(np.array(penrose), 2, sum_to_zero=True)
+    penrose = [np.array([np.cos(j * np.pi * 2.0 / 5.0), np.sin(j * np.pi * 2.0 / 5.0)]) for j in range(5)]
+    return dg.Basis(np.array(penrose), sum_to_zero=True)
 
 def ammann_basis():
-    am = [np.array([np.cos(j * np.pi * 2.0 / 8.0), np.sin(j * np.pi * 2.0 / 8.0), 0.0]) for j in range(4)]
-    am.append(np.array([0.0, 0.0, 1.0]))
-    return dg.Basis(np.array(am), 2)
+    am = [np.array([np.cos(j * np.pi * 2.0 / 8.0), np.sin(j * np.pi * 2.0 / 8.0)]) for j in range(4)]
+    return dg.Basis(np.array(am))
 
 def hexagonal_basis():
     return dg.Basis(np.array([
         np.array([1.0, 0.0, 0.0]),
         np.array([1.0/2.0, np.sqrt(3)/2.0, 0.0]),
         np.array([0.0, 0.0, 1.0]),
-    ]), 3)
+    ]))
 
 
 """ Filtering functions. Must take form (point, filter_centre, param_1, param_2, ..., param_N)
@@ -197,22 +195,15 @@ def generate_wire_mesh(
 
     print("CELL COUNT:", len(verts)//8)
 
-    cylinders = []
-    balls = []
-
     with pygmsh.occ.Geometry() as geom:       # Use CAD-like commands
         geom.characteristic_length_max = mesh_max_length
         geom.characteristic_length_min = mesh_min_length
 
         for v in verts:
-            balls.append(geom.add_ball(v, vertex_radius))
+            geom.add_ball(v, vertex_radius)
 
         for e in edges:
-            axial_vec = verts[e[1]] - verts[e[0]]
-            # cyl = geom.add_cylinder(verts[e[0]] + (axial_vec * wire_radius/2.0), axial_vec - (axial_vec * wire_radius/2.0), wire_radius)
-            cyl = geom.add_cylinder(verts[e[0]], axial_vec, wire_radius)
-            # total = geom.boolean_union([ total, cyl ])
-            cylinders.append(cyl)
+            geom.add_cylinder(verts[e[0]], verts[e[1]] - verts[e[0]], wire_radius)
 
         mesh = geom.generate_mesh(**kwargs)
 
