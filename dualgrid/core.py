@@ -298,7 +298,7 @@ class Rhombahedron:
                     return True
 
             return False
-
+    
 
 def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accuracy=4, old=False):
     """ de Bruijn dual grid method.
@@ -323,30 +323,28 @@ def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accur
         rhombohedra[possible_volume] = []
 
     # Find intersections between each of the plane sets
-    for p in range(len(basis) - 2):
-        for q in range(p+1, len(basis)-1):
-            for r in range(q+1, len(basis)):
-                js = [p, q, r]
-                if old:
-                    intersections, k_combos = plane_sets[p].old_get_intersections_with(k_range, plane_sets[q], plane_sets[r])
-                else:
-                    intersections, k_combos = plane_sets[p].get_intersections_with(k_range, [plane_sets[q], plane_sets[r]])
-                # DEBUG print("Intersections between plane sets p:%s, q:%s, r:%s : %d" % (p, q, r, len(intersections)))
-                for i, intersection in enumerate(intersections):
-                    # Calculate neighbours for this intersection
-                    indices_set = get_neighbours(intersection, js, k_combos[i], basis, offsets)
-                    vertices_set = []
+    for js in itertools.combinations(range(len(plane_sets)), basis_obj.dimensions):
+        if old:
+            intersections, k_combos = plane_sets[js[0]].old_get_intersections_with(k_range, plane_sets[js[1]], plane_sets[js[2]])
+        else:
+            intersections, k_combos = plane_sets[js[0]].get_intersections_with(k_range, [plane_sets[js[1]], plane_sets[js[2]]])
+        # DEBUG print("Intersections between plane sets p:%s, q:%s, r:%s : %d" % (p, q, r, len(intersections)))
+        print("INTERSECTIONS:", intersections)
+        for i, intersection in enumerate(intersections):
+            # Calculate neighbours for this intersection
+            indices_set = get_neighbours(intersection, js, k_combos[i], basis, offsets)
+            vertices_set = []
 
-                    for indices in indices_set:
-                        vertex = realspace(indices, basis)
-                        # DEBUG print("Vertex output for %s:\t%s" % (indices, vertex))
-                        vertices_set.append(vertex)
+            for indices in indices_set:
+                vertex = realspace(indices, basis)
+                # DEBUG print("Vertex output for %s:\t%s" % (indices, vertex))
+                vertices_set.append(vertex)
 
-                    vertices_set = np.array(vertices_set)
-                    r = Rhombahedron(vertices_set, indices_set, js)
-                    # Get volume and append to appropriate rhombohedra list
-                    volume = r.get_volume()
-                    volume = np.around(volume, shape_accuracy)
-                    rhombohedra[volume].append(r)
+            vertices_set = np.array(vertices_set)
+            r = Rhombahedron(vertices_set, indices_set, js)
+            # Get volume and append to appropriate rhombohedra list
+            volume = r.get_volume()
+            volume = np.around(volume, shape_accuracy)
+            rhombohedra[volume].append(r)
 
     return rhombohedra, possible_cells

@@ -75,7 +75,7 @@ def get_centre_of_interest(rhombohedra):
 """ Graph
 """
 
-def verts_and_edges_from_rhombs(rhombs, filter=None, filter_whole_cells=True, filter_args=[], filter_centre=np.zeros(3), fast_filter=False):
+def verts_and_edges_from_rhombs(rhombs, filter=None, filter_whole_cells=True, filter_args=[], filter_centre=None, fast_filter=False):
     """ Returns a list of all vertices and edges with no duplicates, given a
         dictionary of cells.
         Takes a function to filter out points with, along with it's arguments
@@ -83,6 +83,10 @@ def verts_and_edges_from_rhombs(rhombs, filter=None, filter_whole_cells=True, fi
     unique_indices = []  # Edges will be when distance between indices is 1
     verts = []
     edges = []
+
+    if not filter_centre:
+        # Find centre of interest
+        filter_centre = get_centre_of_interest(rhombs)
 
     for _vol, rhombs in rhombs.items():
         for rhomb in rhombs:
@@ -114,11 +118,51 @@ def verts_and_edges_from_rhombs(rhombs, filter=None, filter_whole_cells=True, fi
                 # linked
                 edges.append([i, j])
 
-    return verts, edges
+    return np.array(verts), np.array(edges)
 
 
 """ RENDERING
 """
+def render_verts_and_edges(
+    ax,
+    verts,
+    edges,
+    vert_size=10.0,
+    edge_thickness=2.0,
+    vert_colour="r",
+    edge_colour="k",
+    axis_size=5.0,
+    filter_centre=None,
+):
+    if not filter_centre:
+        # Find centre of interest
+        filter_centre = np.mean(verts, axis=0)
+
+    # Plot edges
+    for edge in edges:
+        vs = np.array([verts[e] for e in edge])
+        ax.plot(vs[:,0], vs[:,1], vs[:,2], "%s-" % edge_colour, linewidth=edge_thickness)
+
+    # Plot vertices
+    ax.plot(verts[:,0], verts[:,1], verts[:,2], "%s." % vert_colour, markersize=vert_size)
+
+    # Set axis scaling equal and set size
+    world_limits = ax.get_w_lims()
+    ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
+
+    axes_bounds = [
+        filter_centre - np.array([axis_size, axis_size, axis_size]),  # Lower
+        filter_centre + np.array([axis_size, axis_size, axis_size])  # Upper
+    ]
+    ax.set_xlim(axes_bounds[0][0], axes_bounds[1][0])
+    ax.set_ylim(axes_bounds[0][1], axes_bounds[1][1])
+    ax.set_zlim(axes_bounds[0][2], axes_bounds[1][2])
+
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+
+
 def render_rhombohedra(
         ax,
         rhombohedra,
@@ -128,7 +172,7 @@ def render_rhombohedra(
         filter_args=[],
         fast_filter=False, # False: checks 1 node per rhombohedron, fast checks all 8 are within range
         shape_opacity=0.6,
-        axis_size=10.0,
+        axis_size=5.0,
 ):
     """ Renders rhombohedra with matplotlib
     Has to filter whole cells due to the nature of the render.
