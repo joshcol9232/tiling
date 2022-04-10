@@ -32,19 +32,12 @@ EDGES = np.array([  # Connections between neighbours for every cell
 def _get_k_combos(k_range, dimensions):
     return np.array(list(itertools.product(*[ [k for k in range(1-k_range, k_range)] for _d in range(dimensions) ])))
 
-class PlaneSet:
+class ConstructionSet:
     def __init__(self, normal, offset, setnum, k_range):
         self.normal = normal
         self.offset = offset
         self.setnum = setnum
         self.k_range = k_range
-
-    def __getitem__(self, k):
-        """ Returns point on plane of index k
-            PlaneSet[0] -> plane 0 of planeset
-        """
-        return self.normal + self.normal * (self.offset + k)
-
 
     def get_intersections_with(self, k_range, others):
         """
@@ -58,7 +51,6 @@ class PlaneSet:
             coef.append(other.normal)
 
         coef = np.matrix(coef)
-        print("COEF_NEW:", coef)
 
         # Check for singular matrix
         if np.linalg.det(coef) == 0:
@@ -81,52 +73,6 @@ class PlaneSet:
         intersections = np.asarray( (coef_inv * np.asmatrix(ds).T).T )
 
         return intersections, k_combos
-
-
-
-    def old_get_intersections_with(self, k_range, other1, other2):
-        """
-        If this plane intersects with two other planes at a point, this function
-        will return the location of this intersection in real space.
-        """
-        # Checks:
-        if np.dot(self.normal, np.cross(other1.normal, other2.normal)) == 0:
-            print("WARNING: Sets (%s, %s, %s) may not cross at single points." % (self.setnum, other1.setnum, other2.setnum))
-            return [], []
-
-        coef = np.matrix([
-            self.normal,
-            other1.normal,
-            other2.normal
-        ])
-        print("COEF OLD:", coef)
-
-        # Check for singular matrix
-        if np.linalg.det(coef) == 0:
-            print("WARNING: Unit vectors form singular matrices.")
-            return [], []
-
-        # inverse of coefficient matrix
-        coef_inv = np.linalg.inv(coef)
-
-        intersections = []
-
-        k_combos = []
-
-        for k1 in range(1-k_range, k_range):
-            for k2 in range(1-k_range, k_range):
-                for k3 in range(1-k_range, k_range):
-                    k_combos.append([k1, k2, k3])
-                    # remaining part of cartesian form (d)
-                    ds = np.matrix([
-                        [self.offset + k1],
-                        [other1.offset + k2],
-                        [other2.offset + k3]
-                    ])  # Last row of the matrix -> i.e last element of cartesian form ax + bx + c = d, `d`
-                    xyz = np.matmul(coef_inv, ds)
-                    intersections.append(np.array([xyz[0, 0], xyz[1, 0], xyz[2, 0]]))
-
-        return np.array(intersections), k_combos
 
 def realspace(indices, basis):
     out = np.zeros(3, dtype=float)
@@ -301,6 +247,29 @@ class Rhombahedron:
             return False
     
 
+
+def get_cells_from_construction_sets(construction_sets, js, cell_dict, k_range, basis, offsets, shape_accuracy):
+    intersections, k_combos = construction_sets[js[0]].get_intersections_with(k_range, [construction_sets[js[1]], construction_sets[js[2]]])
+    # DEBUG print("Intersections between plane sets %s : %d" % (js, len(intersections)))
+
+    for i, intersection in enumerate(intersections):
+        # Calculate neighbours for this intersection
+        indices_set = get_neighbours(intersection, js, k_combos[i], basis, offsets)
+        vertices_set = []
+
+        for indices in indices_set:
+            vertex = realspace(indices, basis)
+            # DEBUG print("Vertex output for %s:\t%s" % (indices, vertex))
+            vertices_set.append(vertex)
+
+        vertices_set = np.array(vertices_set)
+        c = Rhombahedron(vertices_set, indices_set, js)
+        # Get volume and add to appropriate list
+        volume = c.get_volume()
+        volume = np.around(volume, shape_accuracy)
+        cell_dict[volume].append(c)
+
+
 def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accuracy=4, old=False):
     """ de Bruijn dual grid method.
     Generates and returns rhombohedra from basis given in the range given.
@@ -315,51 +284,17 @@ def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accur
 
     if not offsets:
         offsets = basis_obj.get_offsets(random)
-        print("GENERATED OFFSETS:", offsets)
-
-    print("OFFSETS:", offsets)
 
     # Get each set of parallel planes
-    plane_sets = [ PlaneSet(e, offsets[i], i, k_range) for (i, e) in enumerate(basis) ]
+    construction_sets = [ ConstructionSet(e, offsets[i], i, k_range) for (i, e) in enumerate(basis) ]
 
-    rhombohedra = {}
+    cell_dict = {}
     for possible_volume in possible_cells.keys():
-        rhombohedra[possible_volume] = []
-
-    total_intersections = 0
-    total_rhombs = 0
-    all_intersections = []
+        cell_dict[possible_volume] = []
 
     # Find intersections between each of the plane sets
-    for js in itertools.combinations(range(len(plane_sets)), basis_obj.dimensions):
-        if old:
-            intersections, k_combos = plane_sets[js[0]].old_get_intersections_with(k_range, plane_sets[js[1]], plane_sets[js[2]])
-        else:
-            intersections, k_combos = plane_sets[js[0]].get_intersections_with(k_range, [plane_sets[js[1]], plane_sets[js[2]]])
-        print("Intersections between plane sets %s : %d" % (js, len(intersections)))
+    for js in itertools.combinations(range(len(construction_sets)), basis_obj.dimensions):
+        get_cells_from_construction_sets(construction_sets, js, cell_dict, k_range, basis, offsets, shape_accuracy)
 
-        total_intersections += len(intersections)
-        for i, intersection in enumerate(intersections):
-            all_intersections.append(intersection)
-            # Calculate neighbours for this intersection
-            indices_set = get_neighbours(intersection, js, k_combos[i], basis, offsets)
-            vertices_set = []
+    return cell_dict, possible_cells, offsets
 
-            for indices in indices_set:
-                vertex = realspace(indices, basis)
-                # DEBUG print("Vertex output for %s:\t%s" % (indices, vertex))
-                vertices_set.append(vertex)
-
-            vertices_set = np.array(vertices_set)
-            r = Rhombahedron(vertices_set, indices_set, js)
-            total_rhombs += 1
-            # Get volume and append to appropriate rhombohedra list
-            volume = r.get_volume()
-            volume = np.around(volume, shape_accuracy)
-            rhombohedra[volume].append(r)
-
-
-    print("Total rhombs:", total_rhombs)
-    print("Total intersections:", total_intersections)
-
-    return rhombohedra, possible_cells, np.array(all_intersections), offsets

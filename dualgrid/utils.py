@@ -62,13 +62,13 @@ def is_point_within_cube(r, filter_centre, size):
     sizediv2 = size/2.0
     return abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2
 
-def get_centre_of_interest(rhombohedra):
+def get_centre_of_interest(cell_dict):
     """ Used to centre the camera/filter on the densest part of the generated crystal.
     """
     all_verts = []
-    for volume, rhombs in rhombohedra.items():
-        for r in rhombs:
-            for v in r.verts:
+    for volume, cells in cell_dict.items():
+        for c in cells:
+            for v in c.verts:
                 all_verts.append(v)
 
     return np.mean(all_verts, axis=0)  # centre of interest is mean of all the vertices
@@ -76,7 +76,7 @@ def get_centre_of_interest(rhombohedra):
 """ Graph
 """
 
-def verts_and_edges_from_rhombs(rhombs, filter=None, filter_whole_cells=True, filter_args=[], filter_centre=None, fast_filter=False):
+def verts_and_edges_from_cells(cell_dict, filter=None, filter_whole_cells=True, filter_args=[], filter_centre=None, fast_filter=False):
     """ Returns a list of all vertices and edges with no duplicates, given a
         dictionary of cells.
         Takes a function to filter out points with, along with it's arguments
@@ -87,30 +87,30 @@ def verts_and_edges_from_rhombs(rhombs, filter=None, filter_whole_cells=True, fi
 
     if not filter_centre:
         # Find centre of interest
-        filter_centre = get_centre_of_interest(rhombs)
+        filter_centre = get_centre_of_interest(cell_dict)
 
-    for _vol, rhombs in rhombs.items():
-        for rhomb in rhombs:
+    for _vol, cells in cell_dict.items():
+        for c in cells:
             if filter and filter_whole_cells:
-                # Check whole rhombahedron is in filter before continuing
-                include_rhomb = rhomb.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter)
-                if include_rhomb:
-                    for arr_index, i in enumerate(rhomb.indices):
+                # Check whole cell is in filter before continuing
+                include_cell = c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter)
+                if include_cell:
+                    for arr_index, i in enumerate(c.indices):
                         i = list(i)
                         if i not in unique_indices:
                             unique_indices.append(i)
-                            verts.append(rhomb.verts[arr_index])
+                            verts.append(c.verts[arr_index])
             else:
-                for arr_index, i in enumerate(rhomb.indices):
+                for arr_index, i in enumerate(c.indices):
                     i = list(i)
                     # Check vertex inside filtering distance
                     in_range = True
                     if filter:  # If a filtering function is given, then filter out the point
-                        in_range = filter(rhomb.verts[arr_index], filter_centre, *filter_args)
+                        in_range = filter(c.verts[arr_index], filter_centre, *filter_args)
 
                     if in_range and i not in unique_indices:
                         unique_indices.append(i)
-                        verts.append(rhomb.verts[arr_index])
+                        verts.append(c.verts[arr_index])
 
     # Indices with distance 1 are edges
     for i in range(len(unique_indices)-1):
@@ -164,9 +164,9 @@ def render_verts_and_edges(
     ax.set_zlabel("z")
 
 
-def render_rhombohedra(
+def render_cells(
         ax,
-        rhombohedra,
+        cell_dict,
         colormap_str,
         filter=None,
         filter_centre=None,
@@ -175,26 +175,26 @@ def render_rhombohedra(
         shape_opacity=0.6,
         axis_size=5.0,
 ):
-    """ Renders rhombohedra with matplotlib
+    """ Renders cells with matplotlib
     Has to filter whole cells due to the nature of the render.
     """
     clrmap = cm.get_cmap(colormap_str)
 
     if not filter_centre:
         # Find centre of interest
-        filter_centre = get_centre_of_interest(rhombohedra)
+        filter_centre = get_centre_of_interest(cell_dict)
 
-    for volume, rhombs in rhombohedra.items():
+    for volume, cells in cell_dict.items():
         color = clrmap(volume)
 
-        for r in rhombs:
+        for c in cells:
             in_render = True
             # apply filter if there is one
             if filter:
-                in_render = r.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter)
+                in_render = c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter)
 
             if in_render:
-                faces = r.get_faces()
+                faces = c.get_faces()
                 shape_col = Poly3DCollection(faces, facecolors=color, linewidths=0.2, edgecolors="k", alpha=shape_opacity)
                 ax.add_collection(shape_col)
 
@@ -220,7 +220,7 @@ def render_rhombohedra(
 """ STL Output
 """
 def generate_wire_mesh(
-        rhombs,
+        cell_dict,
         wire_radius=0.1,
         vertex_radius=None,
         mesh_min_length=0.005,   # Arbitrary defaults
@@ -236,7 +236,7 @@ def generate_wire_mesh(
     if not vertex_radius:
         vertex_radius = wire_radius
 
-    verts, edges = verts_and_edges_from_rhombs(rhombs, filter=filter, filter_centre=filter_centre, filter_args=filter_args, filter_whole_cells=filter_whole_cells, fast_filter=fast_filter)
+    verts, edges = verts_and_edges_from_cells(cell_dict, filter=filter, filter_centre=filter_centre, filter_args=filter_args, filter_whole_cells=filter_whole_cells, fast_filter=fast_filter)
 
     print("CELL COUNT:", len(verts)//8)
 
@@ -257,11 +257,11 @@ def generate_wire_mesh(
 
     return mesh
 
-def generate_solid_mesh(rhombs, **kwargs):
+def generate_solid_mesh(cell_dict, **kwargs):
     with pygmsh.geo.Geometry() as geom:
-        for cell_type in rhombs.values():
-            for r in cell_type:
-                for face in r.get_faces():
+        for cells in cell_dict.values():
+            for c in cells:
+                for face in c.get_faces():
                     geom.add_polygon(face, mesh_size=0.1)
 
         mesh = geom.generate_mesh(**kwargs)
