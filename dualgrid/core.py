@@ -140,7 +140,7 @@ def get_largest_node_displacement(basis):
 
     return l, l_norm
 
-def triple_product(a, b, c):
+def _triple_product(a, b, c):
     return np.dot( a, np.cross(b, c) )
 
 
@@ -191,7 +191,7 @@ class Basis:
         for i in range(len(self.vecs-2)):  # Compare each vector set
             for j in range(i+1, len(self.vecs)-1):
                 for k in range(j+1, len(self.vecs)):
-                    vol = abs(triple_product(self.vecs[i], self.vecs[j], self.vecs[k]))
+                    vol = abs(_triple_product(self.vecs[i], self.vecs[j], self.vecs[k]))
                     vol = np.around(vol, decimals=decimals)
                     if vol not in shapes.keys():
                         shapes[vol] = []
@@ -201,20 +201,20 @@ class Basis:
         return shapes
 
 """ MAIN ALGORITHM """
-class Rhombahedron:
+class Cell:
     def __init__(self, vertices, indices, parent_sets):
         self.verts = vertices
         self.indices = indices
         self.parent_sets = parent_sets
 
     def __repr__(self):
-        return "Rhombahedron(%s parents %s)" % (self.indices[0], self.parent_sets)
+        return "Cell(%s parents %s)" % (self.indices[0], self.parent_sets)
 
-    def get_volume(self): # General for every rhombahedron given that vertices are generated the same way every time (they are due to get_neighbours function)
-        return abs(triple_product(self.verts[1] - self.verts[0], self.verts[2] - self.verts[0], self.verts[4] - self.verts[0]))
+    def get_volume(self): # General for every 3D cell given that vertices are generated the same way every time (they are due to get_neighbours function)
+        return abs(_triple_product(self.verts[1] - self.verts[0], self.verts[2] - self.verts[0], self.verts[4] - self.verts[0]))
 
     def get_faces(self):
-        """ Returns the vertices of each face in draw order (ACW) for the rhombahedron
+        """ Returns the vertices of each face in draw order (ACW) for the 3D cell
         """
         faces = np.zeros((6, 4, 3), dtype=float)
         for i, face in enumerate(FACE_INDICES):
@@ -235,7 +235,7 @@ class Rhombahedron:
     def is_in_filter(self, filter, filter_centre, filter_args, fast=False):
         """ Utility function for checking whever the rhombohedron is in rendering distance
         `fast` just checks the first vertex and exits, otherwise if any of the vertices are inside the filter
-        then the whole rhombahedron is inside filter
+        then the whole cell is inside filter
         """
         if fast:
             return filter(self.verts[0], filter_centre, *filter_args)
@@ -263,7 +263,7 @@ def get_cells_from_construction_sets(construction_sets, js, cell_dict, k_range, 
             vertices_set.append(vertex)
 
         vertices_set = np.array(vertices_set)
-        c = Rhombahedron(vertices_set, indices_set, js)
+        c = Cell(vertices_set, indices_set, js)
         # Get volume and add to appropriate list
         volume = c.get_volume()
         volume = np.around(volume, shape_accuracy)
@@ -272,12 +272,9 @@ def get_cells_from_construction_sets(construction_sets, js, cell_dict, k_range, 
 
 def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accuracy=4, old=False):
     """ de Bruijn dual grid method.
-    Generates and returns rhombohedra from basis given in the range given.
+    Generates and returns cells from basis given in the range given.
     Shape accuracy is the number of decimal places used to classify cell shapes
-    Returns: rhombohedra, possible cell shapes
-    :param basis_obj:
-    :param k_ranges:
-    :return:
+    Returns: cells, possible cell shapes, offsets used
     """
     possible_cells = basis_obj.get_possible_cells(shape_accuracy)
     basis = basis_obj.vecs
