@@ -10,7 +10,7 @@ import networkx as nx
 
 """ OFFSET generation
 """
-def generate_offsets(num, random, below_one=True, sum_zero=False):
+def generate_offsets(num, random, below_one=False, sum_zero=False):
     if random:
         rng = np.random.default_rng(int(time.time() * 10))
     else:
@@ -60,7 +60,7 @@ def hypercubic_basis(random_offsets=True):
         np.array([0.0, 0.0, 0.0, 1.0]),
     ]), generate_offsets(4, random_offsets))
 
-def surface_with_n_rotsym(n, sum_to_zero=False, random_offsets=True):
+def surface_with_n_rotsym(n, sum_to_zero=False, below_one=False, random_offsets=True):
     """
     Basis for generating a 2D structure with `n` rotational symmetry.
     """
@@ -69,12 +69,12 @@ def surface_with_n_rotsym(n, sum_to_zero=False, random_offsets=True):
         n //= 2   # To stop identical basis sets being created for even symmetries
 
     vecs = np.array([[np.cos(j * np.pi * 2.0/N), np.sin(j * np.pi * 2.0/N)] for j in range(n)])
-    offsets = generate_offsets(n, random_offsets, below_one=True, sum_zero=sum_to_zero)
+    offsets = generate_offsets(n, random_offsets, below_one=below_one, sum_zero=sum_to_zero)
 
     return dg.Basis(vecs, offsets)
 
 def penrose_basis(random_offsets=True):
-    return surface_with_n_rotsym(5, sum_to_zero=True, random_offsets=random_offsets)
+    return surface_with_n_rotsym(5, sum_to_zero=True, below_one=True, random_offsets=random_offsets)
 
 def ammann_basis(random_offsets=True):
     return surface_with_n_rotsym(8)  # TODO: Do you need to sum to 0 for ammann?
@@ -100,9 +100,10 @@ def is_point_within_cube(r, filter_centre, size):
     Used to retain cells within a cube centred at filter_centre.
     N dimensional cube
     """
-    d = abs(r - filter_centre)
+    diff = r - filter_centre
     sizediv2 = size/2.0
-    return d[0] < sizediv2 and d[1] < sizediv2 and d[2] < sizediv2
+
+    return np.sum([abs(d) > sizediv2 for d in diff]) == 0
 
 def get_centre_of_interest(cells):
     """ Used to centre the camera/filter on the densest part of the generated crystal.
@@ -130,6 +131,7 @@ def graph_from_cells(cells, filter=None, filter_whole_cells=True, filter_args=[]
     if not filter_centre:
         # Find centre of interest
         filter_centre = get_centre_of_interest(cells)
+        print("COI:", filter_centre)
 
     for c in cells:
         if filter and filter_whole_cells:
@@ -211,8 +213,13 @@ def _render_2D_wire(
     verts = vertex_positions_from_graph(G)
     ax.plot(verts[:,0], verts[:,1], "%s." % vert_colour, markersize=vert_size, alpha=vert_alpha)
 
-    plt.xlim(-axis_size, axis_size)
-    plt.ylim(-axis_size, axis_size)
+
+    if not filter_centre:
+        # Find centre of interest
+        filter_centre = np.mean(verts, axis=0)
+
+    plt.xlim(filter_centre[0] - axis_size, filter_centre[0] + axis_size)
+    plt.ylim(filter_centre[1] - axis_size, filter_centre[1] + axis_size)
     plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
 
 def _render_3D_wire(
@@ -337,9 +344,18 @@ def generate_wire_mesh(
 ):
     # Get vertex positions
     verts = vertex_positions_from_graph(G)
+
+    # If 2D, add a z coordinate of 0
+    if len(verts[0]) == 2:
+        new_verts = []
+        for v in verts:
+            new_verts.append([v[0], v[1], 0.0])
+        verts = np.array(new_verts)
+
     # Make wiremesh and saves to stl file
     if not vertex_radius:
         vertex_radius = wire_radius
+    print("VERTEX RAD:", vertex_radius)
 
     print("CELL COUNT:", len(verts)//8)
 
@@ -352,6 +368,13 @@ def generate_wire_mesh(
 
         for edge in G.edges:
             vs = np.array([G.nodes[e]["position"][:3] for e in edge]) # Truncate to 3D
+            # If 2D, add a z coordinate of 0
+            if len(vs[0]) == 2:
+                new_verts = []
+                for v in vs:
+                    new_verts.append([v[0], v[1], 0.0])
+                vs = np.array(new_verts)
+
             geom.add_cylinder(vs[0], vs[1] - vs[0], wire_radius)
 
         mesh = geom.generate_mesh(**kwargs)

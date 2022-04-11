@@ -141,24 +141,24 @@ class Cell:
     def __repr__(self):
         return "Cell(%s parents %s)" % (self.indices[0], self.parent_sets)
 
-    def get_faces(self):
-        """ Returns the vertices of each face in draw order (ACW) for the 3D cell
-        """
-        faces = np.zeros((6, 4, 3), dtype=float)
-        for i, face in enumerate(FACE_INDICES):
-            for j, face_index in enumerate(face):
-                faces[i][j] = self.verts[face_index]
+    # TODO: Fix for general case
+    # def get_faces(self):
+    #     """ Returns the vertices of each face in draw order (ACW) for the 3D cell
+    #     """
+    #     faces = np.zeros((6, 4, 3), dtype=float)
+    #     for i, face in enumerate(FACE_INDICES):
+    #         for j, face_index in enumerate(face):
+    #             faces[i][j] = self.verts[face_index]
 
-        return faces
+    #     return faces    
+    # def get_edges(self):
+    #     """ Returns unordered list of edges
+    #     """
+    #     edges = []
+    #     for edge in EDGES:
+    #         edges.append([self.verts[edge[0]], self.verts[edge[1]]])
 
-    def get_edges(self):
-        """ Returns unordered list of edges
-        """
-        edges = []
-        for edge in EDGES:
-            edges.append([self.verts[edge[0]], self.verts[edge[1]]])
-
-        return edges
+    #     return edges
 
     def is_in_filter(self, filter, filter_centre, filter_args=[], fast=False):
         """ Utility function for checking whever the rhombohedron is in rendering distance
@@ -241,5 +241,5 @@ def dualgrid_method(basis, k_range=3, shape_accuracy=4):
     for js in itertools.combinations(range(len(construction_sets)), basis.dimensions):
         _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy)
 
-    return cells #, possible_cells
+    return cells
 

@@ -4,35 +4,21 @@ import matplotlib.pyplot as plt
 
 # Make a Basis object. There are some presets available in the `utils`.
 # basis = dg.utils.ammann_basis()
-# basis = dg.utils.surface_with_n_rotsym(7)
-basis = dg.utils.icosahedral_basis()
+basis = dg.utils.surface_with_n_rotsym(7)
+# basis = dg.utils.icosahedral_basis()
 
 # Set the filtering distance. In this example we will take a 1x1 cube out of the centre of the
 # generated structure.
-filt_dist = 2.1
+filt_dist = 2.0
 
-# Run the algorithm. k_ranges sets the number of construction planes used in the method, but you can also
-# put in a 2D array specifying what indices to go through for each plane set if you wish.
-# The function outputs:
-# `rhombohedra` -> A dictionary of { cell volume: [ generated rhombohedra, ... ], ... }.
-# `possible_cells` -> All of the possible cell volumes you can generate with the given basis.
-cells = dg.dualgrid_method(basis, k_range=1)
-# verts, edges = dg.utils.verts_and_edges_from_cells(cells, filter=dg.utils.is_point_within_cube, filter_args=[filt_dist])
-# G = dg.utils.graph_from_cells(cells)
-G = dg.utils.graph_from_cells(cells, filter=dg.utils.is_point_within_radius, filter_args=[filt_dist])
-
-print("Generated rhombohedra.")
-
-# Render the output in matplotlib. `filter` can be any function that takes a point, centre of interest
-# and extra parameters (filter_args), and then outputs a boolean value.
-# "ocean" here is the name of the matplotlib colourmap we would like to use.
-
-# dg.utils.render_cells(ax, cell_dict, "ocean", filter=dg.utils.is_point_within_cube, filter_args=[filt_dist])
-# dg.utils.render_cells(ax, cell_dict, "ocean", shape_opacity=0.6)
-
+# Run the algorithm. k_ranges sets the number of construction planes used in the method.
+# The function outputs a list of Cell objects.
+cells = dg.dualgrid_method(basis, k_range=2)
+G = dg.utils.graph_from_cells(cells, filter=dg.utils.is_point_within_radius, filter_args=[filt_dist], fast_filter=False)
+print("Generated graph.")
 
 dg.utils.render_graph(G)
-mesh = dg.utils.generate_wire_mesh(G)
-mesh.write("G_test.stl")
-
 plt.show()
+
+mesh = dg.utils.generate_wire_mesh(G, verbose=True)
+mesh.write("7fold.stl")
