@@ -5,6 +5,7 @@ from matplotlib import cm
 import matplotlib.pyplot as plt
 import pygmsh
 import time
+import networkx as nx
 
 
 """ OFFSET generation
@@ -88,12 +89,6 @@ def hexagonal_basis(random_offsets=True):
 
 """ Filtering functions. Must take form (point, filter_centre, param_1, param_2, ..., param_N)
 """
-def no_filter(_r, _filter_centre):
-    """
-    Default filter -> filter nothing.
-    """
-    return True
-
 def is_point_within_radius(r, filter_centre, radius):
     """
     Used to retain cells within a certain radius of the filter_centre.
@@ -121,15 +116,16 @@ def get_centre_of_interest(cells):
 
 """ Graph
 """
-
-def verts_and_edges_from_cells(cells, filter=no_filter, filter_whole_cells=True, filter_args=[], filter_centre=None, fast_filter=False):
+def graph_from_cells(cells, filter=None, filter_whole_cells=True, filter_args=[], filter_centre=None, fast_filter=False):
     """ Returns a list of all vertices and edges with no duplicates, given a
         list of cells.
         Takes a function to filter out points with, along with it's arguments
     """
     unique_indices = []  # Edges will be when distance between indices is 1
-    verts = []
-    edges = []
+    vert_arr_indices = []
+    G = nx.Graph()
+
+    curr_node_count = 0
 
     if not filter_centre:
         # Find centre of interest
@@ -143,8 +139,14 @@ def verts_and_edges_from_cells(cells, filter=no_filter, filter_whole_cells=True,
                 for arr_index, i in enumerate(c.indices):
                     i = list(i)
                     if i not in unique_indices:
+                        node_ind = curr_node_count + arr_index
                         unique_indices.append(i)
-                        verts.append(c.verts[arr_index])
+                        vert_arr_indices.append(node_ind)
+                        G.add_node(
+                            node_ind,
+                            position=c.verts[arr_index],
+                            indices=i,
+                        )
         else:
             for arr_index, i in enumerate(c.indices):
                 i = list(i)
@@ -155,31 +157,38 @@ def verts_and_edges_from_cells(cells, filter=no_filter, filter_whole_cells=True,
 
                 if in_range and i not in unique_indices:
                     unique_indices.append(i)
-                    verts.append(c.verts[arr_index])
+                    node_ind = curr_node_count + arr_index
+                    vert_arr_indices.append(node_ind)
+                    G.add_node(
+                        node_ind,
+                        position=c.verts[arr_index],
+                        indices=i,
+                    )
+        
+        curr_node_count += len(c.verts)
 
     # Indices with distance 1 are edges
     for i in range(len(unique_indices)-1):
         for j in range(i+1, len(unique_indices)):
             if np.linalg.norm(np.array(unique_indices[j]) - np.array(unique_indices[i])) == 1:
                 # linked
-                edges.append([i, j])
+                G.add_edge(vert_arr_indices[i], vert_arr_indices[j])
 
-    return np.array(verts), np.array(edges)
+    return G
 
 
 """ RENDERING
 """
 
-def render_wire(verts, edges, **kwargs):
-    if len(verts[0]) == 2:
-        _render_2D_wire(verts, edges, **kwargs)
+def render_graph(G, **kwargs):
+    if len(list(G.nodes(data=True))[0][1]["position"]) == 2:
+        _render_2D_wire(G, **kwargs)
     else:
-        _render_3D_wire(verts, edges, **kwargs)
+        _render_3D_wire(G, **kwargs)
 
 def _render_2D_wire(
-    verts,
-    edges,
-    vert_size=7.0,
+    G,
+    vert_size=5.0,
     vert_alpha=1.0,
     edge_thickness=2.0,
     edge_alpha=1.0,
@@ -190,12 +199,12 @@ def _render_2D_wire(
 ):
     fig, ax = plt.subplots(1, figsize=(5, 5), dpi=200)
     ax.axis("equal")
-    # colour_palette = cm.get_cmap(clrmap, 8)
 
-    for edge in edges:
-        vs = np.array([verts[e] for e in edge])
+    for edge in G.edges:
+        vs = np.array([G.nodes[e]["position"] for e in edge])
         ax.plot(vs[:,0], vs[:,1], "%s-" % edge_colour, linewidth=edge_thickness, alpha=edge_alpha)
 
+    verts = np.array([v[1]["position"] for v in G.nodes.data()])
     ax.plot(verts[:,0], verts[:,1], "%s." % vert_colour, markersize=vert_size, alpha=vert_alpha)
 
     plt.xlim(-axis_size, axis_size)
@@ -237,8 +246,8 @@ def _render_3D_wire(
     ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
 
     axes_bounds = [
-        filter_centre - np.array([axis_size, axis_size, axis_size]),  # Lower
-        filter_centre + np.array([axis_size, axis_size, axis_size])  # Upper
+        filter_centre[:3] - np.array([axis_size, axis_size, axis_size]),  # Lower
+        filter_centre[:3] + np.array([axis_size, axis_size, axis_size])  # Upper
     ]
     ax.set_xlim(axes_bounds[0][0], axes_bounds[1][0])
     ax.set_ylim(axes_bounds[0][1], axes_bounds[1][1])
@@ -263,7 +272,7 @@ def _render_3D_wire(
 #         ax,
 #         cells,
 #         colormap_str,
-#         filter=no_filter,
+#         filter=None,
 #         filter_centre=None,
 #         filter_args=[],
 #         fast_filter=False, # False: checks 1 node per rhombohedron, fast checks all 8 are within range
