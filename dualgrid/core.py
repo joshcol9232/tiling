@@ -1,5 +1,4 @@
 import numpy as np
-import time
 import itertools
 
 
@@ -74,23 +73,7 @@ class ConstructionSet:
 
         return intersections, k_combos
 
-def realspace(indices, basis):
-    out = np.zeros(3, dtype=float)
-    for j, e in enumerate(basis):
-        out += e * indices[j]
-
-    return out
-
-def gridspace(r, basis, offsets):
-    out = np.zeros(len(basis), dtype=int)
-
-    for j, e in enumerate(basis):
-        out[j] = int(np.ceil( np.dot( r, basis[j] ) - offsets[j] ))
-
-    return out
-
-
-def get_neighbours(intersection, js, ks, basis, offsets):
+def _get_neighbours(intersection, js, ks, basis):
     directions = np.array([   # Each possible neighbour of intersection. Derived from eq. 4.5 in de Bruijn paper
         [0, 0, 0],
         [0, 1, 0],
@@ -103,7 +86,7 @@ def get_neighbours(intersection, js, ks, basis, offsets):
         [1, 1, 1]
     ])
 
-    indices = gridspace(intersection, basis, offsets)
+    indices = basis.gridspace(intersection)
 
     # DEBUG print("Root indices before loading:", indices)
     # Load known indices into indices array
@@ -116,9 +99,9 @@ def get_neighbours(intersection, js, ks, basis, offsets):
     neighbours = [ np.array([ v for v in indices ]) for _i in range(8) ]
 
     # Quick note: Kronecker delta function -> (i == j) = False (0) or True (1) in python. Multiplication of bool is allowed
-    delta1 = np.array([ (j == js[0]) * 1 for j in range(len(basis)) ])
-    delta2 = np.array([ (j == js[1]) * 1 for j in range(len(basis)) ])
-    delta3 = np.array([ (j == js[2]) * 1 for j in range(len(basis)) ])
+    delta1 = np.array([ (j == js[0]) * 1 for j in range(len(basis.vecs)) ])
+    delta2 = np.array([ (j == js[1]) * 1 for j in range(len(basis.vecs)) ])
+    delta3 = np.array([ (j == js[2]) * 1 for j in range(len(basis.vecs)) ])
 
     # Apply equation 4.5 in de Bruijn's paper 1, expanded for any basis len and extra third dimension
     for i, e in enumerate(directions): # Corresponds to epsilon in paper
@@ -126,79 +109,54 @@ def get_neighbours(intersection, js, ks, basis, offsets):
 
     return neighbours
 
-
-def get_largest_node_displacement(basis):
-    l = np.zeros(3)
-    l_norm = 0.0
-    for i in range(len(basis)-1):
-        for j in range(i+1, len(basis)):
-            l_temp = basis[i] + basis[j]
-            l_temp_norm = np.linalg.norm(l_temp)
-            if l_temp_norm > l_norm:  #  If bigger
-                l_norm = l_temp_norm
-                l = l_temp
-
-    return l, l_norm
-
 def _triple_product(a, b, c):
     return np.dot( a, np.cross(b, c) )
 
-
 class Basis:
-    def __init__(self, vecs, dimensions, sum_to_zero=False):
+    def __init__(self, vecs, offsets):
         self.vecs = vecs
-        self.dimensions = dimensions
-        self.is_2d = dimensions % 2 == 0
-        self.sum_to_zero = sum_to_zero
+        self.dimensions = len(self.vecs[0])
+        self.offsets = offsets
 
-    def get_offsets(self, is_random):
-        if is_random:
-            offsets = []
-            N = len(self.vecs) - 1 * self.is_2d
-
-            rng = np.random.default_rng(int(time.time() * 10))
-            for i in range(N - 1):
-                offsets.append(rng.random())
-
-            if self.sum_to_zero:
-                if not self.is_2d:
-                    offsets.append(rng.random())
-                # Sum of all sigma needs to equal 0
-                s = np.sum(np.array(offsets))
-                offsets.append(-s)
-                if self.is_2d:
-                    offsets.append(0.0)
-            else:
-                for _i in range(2):
-                    offsets.append(rng.random())
-
-            return offsets
-        else:
-            if self.is_2d:
-                a = [-1.0 / len(self.vecs) for _i in range(len(self.vecs) - 1)]
-                a.append(0.0)
-                return a
-            else:
-                return [-1.0 / len(self.vecs) for _i in range(len(self.vecs))]  # Centre of rotational symmetry in penrose-like case
-
-    def get_possible_cells(self, decimals):
-        """ Function that finds all possible cell shapes in the final mesh.
-            Number of decimal places required for finite hash keys (floats are hard to == )
-            Returns a dictionary of volume : [all possible combinations of basis vector to get that volume]
+    def realspace(self, indices):
         """
-        shapes = {}  # volume : set indices
+        Gives position of given indices in real space.
+        """
+        out = np.zeros(self.dimensions, dtype=float)
+        for j, e in enumerate(self.vecs):
+            out += e * indices[j]
 
-        for i in range(len(self.vecs-2)):  # Compare each vector set
-            for j in range(i+1, len(self.vecs)-1):
-                for k in range(j+1, len(self.vecs)):
-                    vol = abs(_triple_product(self.vecs[i], self.vecs[j], self.vecs[k]))
-                    vol = np.around(vol, decimals=decimals)
-                    if vol not in shapes.keys():
-                        shapes[vol] = []
+        return out
 
-                    shapes[vol].append([i, j, k])
+    def gridspace(self, r):
+        """
+        Returns where a point lies in grid space.
+        """
+        out = np.zeros(len(self.vecs), dtype=int)
 
-        return shapes
+        for j, e in enumerate(self.vecs):
+            out[j] = int(np.ceil( np.dot( r, self.vecs[j] ) - self.offsets[j] ))
+
+        return out
+
+    # def get_possible_cells(self, decimals):
+    #     """ Function that finds all possible cell shapes in the final mesh.
+    #         Number of decimal places required for finite hash keys (floats are hard to == )
+    #         Returns a dictionary of volume : [all possible combinations of basis vector to get that volume]
+    #     """
+    #     shapes = {}  # volume : set indices
+
+    #     for i in range(len(self.vecs-2)):  # Compare each vector set
+    #         for j in range(i+1, len(self.vecs)-1):
+    #             for k in range(j+1, len(self.vecs)):
+    #                 vol = abs(_triple_product(self.vecs[i], self.vecs[j], self.vecs[k]))
+    #                 vol = np.around(vol, decimals=decimals)
+    #                 if vol not in shapes.keys():
+    #                     shapes[vol] = []
+
+    #                 shapes[vol].append([i, j, k])
+
+    #     return shapes
 
 """ MAIN ALGORITHM """
 class Cell:
@@ -232,7 +190,7 @@ class Cell:
 
         return edges
 
-    def is_in_filter(self, filter, filter_centre, filter_args, fast=False):
+    def is_in_filter(self, filter, filter_centre, filter_args=[], fast=False):
         """ Utility function for checking whever the rhombohedron is in rendering distance
         `fast` just checks the first vertex and exits, otherwise if any of the vertices are inside the filter
         then the whole cell is inside filter
@@ -248,50 +206,53 @@ class Cell:
     
 
 
-def get_cells_from_construction_sets(construction_sets, js, cell_dict, k_range, basis, offsets, shape_accuracy):
+def _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy):
     intersections, k_combos = construction_sets[js[0]].get_intersections_with(k_range, [construction_sets[js[1]], construction_sets[js[2]]])
     # DEBUG print("Intersections between plane sets %s : %d" % (js, len(intersections)))
 
     for i, intersection in enumerate(intersections):
         # Calculate neighbours for this intersection
-        indices_set = get_neighbours(intersection, js, k_combos[i], basis, offsets)
+        indices_set = _get_neighbours(intersection, js, k_combos[i], basis)
         vertices_set = []
 
         for indices in indices_set:
-            vertex = realspace(indices, basis)
+            vertex = basis.realspace(indices)
             # DEBUG print("Vertex output for %s:\t%s" % (indices, vertex))
             vertices_set.append(vertex)
 
         vertices_set = np.array(vertices_set)
         c = Cell(vertices_set, indices_set, js)
+        """ OLD
         # Get volume and add to appropriate list
         volume = c.get_volume()
         volume = np.around(volume, shape_accuracy)
         cell_dict[volume].append(c)
+        """
+        cells.append(c)
 
 
-def dualgrid_method(basis_obj, k_range=3, offsets=None, random=True, shape_accuracy=4, old=False):
+
+def dualgrid_method(basis, k_range=3, shape_accuracy=4):
     """ de Bruijn dual grid method.
     Generates and returns cells from basis given in the range given.
     Shape accuracy is the number of decimal places used to classify cell shapes
-    Returns: cells, possible cell shapes, offsets used
+    Returns: cells, possible cell shapes
     """
-    possible_cells = basis_obj.get_possible_cells(shape_accuracy)
-    basis = basis_obj.vecs
-
-    if not offsets:
-        offsets = basis_obj.get_offsets(random)
+    # possible_cells = basis.get_possible_cells(shape_accuracy)
 
     # Get each set of parallel planes
-    construction_sets = [ ConstructionSet(e, offsets[i], i, k_range) for (i, e) in enumerate(basis) ]
+    construction_sets = [ ConstructionSet(e, basis.offsets[i], i, k_range) for (i, e) in enumerate(basis.vecs) ]
 
+    """ OLD dict method
     cell_dict = {}
     for possible_volume in possible_cells.keys():
         cell_dict[possible_volume] = []
+    """
+    cells = []
 
     # Find intersections between each of the plane sets
-    for js in itertools.combinations(range(len(construction_sets)), basis_obj.dimensions):
-        get_cells_from_construction_sets(construction_sets, js, cell_dict, k_range, basis, offsets, shape_accuracy)
+    for js in itertools.combinations(range(len(construction_sets)), basis.dimensions):
+        _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy)
 
-    return cell_dict, possible_cells, offsets
+    return cells #, possible_cells
 
