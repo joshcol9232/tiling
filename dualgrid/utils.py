@@ -22,6 +22,7 @@ def generate_offsets(num, random, below_one=True, sum_zero=False):
     if sum_zero:
         offsets[-1] = -np.sum(offsets)
 
+    print("OFFSETS:", offsets)
     return offsets
 
 
@@ -58,15 +59,24 @@ def hypercubic_basis(random_offsets=True):
         np.array([0.0, 0.0, 0.0, 1.0]),
     ]), generate_offsets(4, random_offsets))
 
-def penrose_basis(random_offsets=True):
-    penrose = [np.array([np.cos(j * np.pi * 2.0 / 5.0), np.sin(j * np.pi * 2.0 / 5.0)]) for j in range(5)]
+def surface_with_n_rotsym(n, sum_to_zero=False, random_offsets=True):
+    """
+    Basis for generating a 2D structure with `n` rotational symmetry.
+    """
+    N = n    # Save N for finding the angles
+    if n % 2 == 0:
+        n //= 2   # To stop identical basis sets being created for even symmetries
 
-    offsets = generate_offsets(5, random_offsets, below_one=True, sum_zero=True) # sum to zero for valid penrose
-    return dg.Basis(np.array(penrose), offsets)
+    vecs = np.array([[np.cos(j * np.pi * 2.0/N), np.sin(j * np.pi * 2.0/N)] for j in range(n)])
+    offsets = generate_offsets(n, random_offsets, below_one=True, sum_zero=sum_to_zero)
+
+    return dg.Basis(vecs, offsets)
+
+def penrose_basis(random_offsets=True):
+    return surface_with_n_rotsym(5, sum_to_zero=True, random_offsets=random_offsets)
 
 def ammann_basis(random_offsets=True):
-    am = [np.array([np.cos(j * np.pi * 2.0 / 8.0), np.sin(j * np.pi * 2.0 / 8.0)]) for j in range(4)]
-    return dg.Basis(np.array(am), generate_offsets(4, random_offsets))
+    return surface_with_n_rotsym(8)  # TODO: Do you need to sum to 0 for ammann?
 
 def hexagonal_basis(random_offsets=True):
     return dg.Basis(np.array([
@@ -92,11 +102,12 @@ def is_point_within_radius(r, filter_centre, radius):
 
 def is_point_within_cube(r, filter_centre, size):
     """
-    Used to retain cells within a cube centred at filter_centre
+    Used to retain cells within a cube centred at filter_centre.
+    N dimensional cube
     """
-    d = r - filter_centre
+    d = abs(r - filter_centre)
     sizediv2 = size/2.0
-    return abs(d[0]) < sizediv2 and abs(d[1]) < sizediv2 and abs(d[2]) < sizediv2
+    return d[0] < sizediv2 and d[1] < sizediv2 and d[2] < sizediv2
 
 def get_centre_of_interest(cells):
     """ Used to centre the camera/filter on the densest part of the generated crystal.
@@ -168,10 +179,10 @@ def render_wire(verts, edges, **kwargs):
 def _render_2D_wire(
     verts,
     edges,
-    vert_size=15.0,
+    vert_size=7.0,
     vert_alpha=1.0,
-    edge_thickness=4.0,
-    edge_alpha=0.5,
+    edge_thickness=2.0,
+    edge_alpha=1.0,
     vert_colour="r",
     edge_colour="k",
     axis_size=5.0,
@@ -187,8 +198,8 @@ def _render_2D_wire(
 
     ax.plot(verts[:,0], verts[:,1], "%s." % vert_colour, markersize=vert_size, alpha=vert_alpha)
 
-    plt.xlim(-plotrange, plotrange)
-    plt.ylim(-plotrange, plotrange)
+    plt.xlim(-axis_size, axis_size)
+    plt.ylim(-axis_size, axis_size)
     plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
 
 

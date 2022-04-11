@@ -34,7 +34,6 @@ class ConstructionSet:
         # Pack Cartesian coefficients into matrix.
         # E.g ax + by + cz = d.     a, b, c for each
         coef = np.matrix([self.normal, *[ o.normal for o in others ]])
-        print("COEF:", coef)
 
         # Check for singular matrix
         if np.linalg.det(coef) == 0:
@@ -78,7 +77,7 @@ def _get_neighbours(intersection, js, ks, basis):
     deltas = [np.array([(j == js[i]) * 1 for j in range(len(basis.vecs))]) for i in range(dimensions)]
 
     # Apply equation 4.5 in de Bruijn's paper 1, expanded for any basis len and extra third dimension
-    for i, e in enumerate(directions): # Corresponds to epsilon in paper
+    for i, e in enumerate(directions): # e Corresponds to epsilon in paper
         neighbours[i] += np.dot(e, deltas)
 
     return neighbours
@@ -240,7 +239,6 @@ def dualgrid_method(basis, k_range=3, shape_accuracy=4):
 
     # Find intersections between each of the plane sets
     for js in itertools.combinations(range(len(construction_sets)), basis.dimensions):
-        print("js:", js)
         _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy)
 
     return cells #, possible_cells

@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 
 
 # Make a Basis object. There are some presets available in the `utils`.
-basis = dg.utils.icosahedral_basis()
+# basis = dg.utils.ammann_basis()
+basis = dg.utils.surface_with_n_rotsym(7)
 
 # Set the filtering distance. In this example we will take a 1x1 cube out of the centre of the
 # generated structure.
@@ -15,7 +16,9 @@ filt_dist = 2.0
 # `rhombohedra` -> A dictionary of { cell volume: [ generated rhombohedra, ... ], ... }.
 # `possible_cells` -> All of the possible cell volumes you can generate with the given basis.
 cells = dg.dualgrid_method(basis, k_range=2)
-verts, edges = dg.utils.verts_and_edges_from_cells(cells, filter=dg.utils.is_point_within_cube, filter_args=[filt_dist])
+# verts, edges = dg.utils.verts_and_edges_from_cells(cells, filter=dg.utils.is_point_within_cube, filter_args=[filt_dist])
+verts, edges = dg.utils.verts_and_edges_from_cells(cells)
+
 
 
 print("Generated rhombohedra.")
@@ -28,7 +31,7 @@ print("Generated rhombohedra.")
 # dg.utils.render_cells(ax, cell_dict, "ocean", shape_opacity=0.6)
 
 
-dg.utils.render_wire(verts, edges)
+dg.utils.render_wire(verts, edges, vert_size=5)
 
 
 # TODO: Make core function output vertices, edges and then edge groups, i.e rhombs in the form of edge indices.
