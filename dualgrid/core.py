@@ -12,20 +12,7 @@ FACE_INDICES = np.array([  # Faces of every rhombohedron (ACW order). Worked out
     [3, 7, 5, 1]
 ])
 
-EDGES = np.array([  # Connections between neighbours for every cell
-    [0, 2],
-    [2, 3],
-    [3, 1],
-    [1, 0],
-    [4, 6],
-    [6, 7],
-    [7, 5],
-    [5, 4],
-    [0, 4],
-    [1, 5],
-    [3, 7],
-    [2, 6]
-])
+EDGES = np.array([[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [1, 6], [2, 3], [2, 5], [2, 6], [3, 4], [3, 7], [4, 5], [4, 6], [5, 7], [6, 7]])
 
 
 def _get_k_combos(k_range, dimensions):
@@ -43,30 +30,25 @@ class ConstructionSet:
         If this plane intersects with two other planes at a point, this function
         will return the location of this intersection in real space.
         """
-   
-        dimensions = len(others) + 1
-        coef = [self.normal] # Cartesian coefficients. E.g ax + by + cz = d. a, b, c
-        for other in others:
-            coef.append(other.normal)
-
-        coef = np.matrix(coef)
+        dimensions = len(self.normal)
+        # Pack Cartesian coefficients into matrix.
+        # E.g ax + by + cz = d.     a, b, c for each
+        coef = np.matrix([self.normal, *[ o.normal for o in others ]])
+        print("COEF:", coef)
 
         # Check for singular matrix
         if np.linalg.det(coef) == 0:
             print("WARNING: Unit vectors form singular matrices.")
             return [], []
 
-        # inverse of coefficient matrix
+        # get inverse of coefficient matrix
         coef_inv = np.linalg.inv(coef)
-
-        intersections = []
 
         k_combos = _get_k_combos(k_range, dimensions)
 
-        base_offsets = [self.offset]  # Offsets, then + [integers] to get specific planes within set
-        for other in others:
-            base_offsets.append(other.offset)
-        base_offsets = np.array(base_offsets)
+        # last part (d) of Cartiesian form.
+        # Pack offsets into N dimensional vector, then + [integers] to get specific planes within set
+        base_offsets = np.array([self.offset, *[ o.offset for o in others ]])
 
         ds = k_combos + base_offsets # remaining part of cartesian form (d)
         intersections = np.asarray( (coef_inv * np.asmatrix(ds).T).T )
@@ -74,17 +56,11 @@ class ConstructionSet:
         return intersections, k_combos
 
 def _get_neighbours(intersection, js, ks, basis):
-    directions = np.array([   # Each possible neighbour of intersection. Derived from eq. 4.5 in de Bruijn paper
-        [0, 0, 0],
-        [0, 1, 0],
-        [1, 0, 0],
-        [1, 1, 0],
-
-        [0, 0, 1],
-        [0, 1, 1],
-        [1, 0, 1],
-        [1, 1, 1]
-    ])
+    # Each possible neighbour of intersection. See eq. 4.5 in de Bruijn paper
+    # For example:
+    # [0, 0], [0, 1], [1, 0], [1, 1] for 2D
+    dimensions = len(ks)
+    directions = np.array(list(itertools.product(*[[0, 1] for _i in range(dimensions)])))
 
     indices = basis.gridspace(intersection)
 
@@ -96,16 +72,14 @@ def _get_neighbours(intersection, js, ks, basis):
     # DEBUG print("Getting neighbours for:", intersection)
     # DEBUG print("Root indices:", indices)
     # First off copy the intersection indices 8 times
-    neighbours = [ np.array([ v for v in indices ]) for _i in range(8) ]
+    neighbours = [ np.array([ v for v in indices ]) for _i in range(len(directions)) ]
 
     # Quick note: Kronecker delta function -> (i == j) = False (0) or True (1) in python. Multiplication of bool is allowed
-    delta1 = np.array([ (j == js[0]) * 1 for j in range(len(basis.vecs)) ])
-    delta2 = np.array([ (j == js[1]) * 1 for j in range(len(basis.vecs)) ])
-    delta3 = np.array([ (j == js[2]) * 1 for j in range(len(basis.vecs)) ])
+    deltas = [np.array([(j == js[i]) * 1 for j in range(len(basis.vecs))]) for i in range(dimensions)]
 
     # Apply equation 4.5 in de Bruijn's paper 1, expanded for any basis len and extra third dimension
     for i, e in enumerate(directions): # Corresponds to epsilon in paper
-        neighbours[i] += e[0] * delta1 + e[1] * delta2 + e[2] * delta3
+        neighbours[i] += np.dot(e, deltas)
 
     return neighbours
 
@@ -168,9 +142,6 @@ class Cell:
     def __repr__(self):
         return "Cell(%s parents %s)" % (self.indices[0], self.parent_sets)
 
-    def get_volume(self): # General for every 3D cell given that vertices are generated the same way every time (they are due to get_neighbours function)
-        return abs(_triple_product(self.verts[1] - self.verts[0], self.verts[2] - self.verts[0], self.verts[4] - self.verts[0]))
-
     def get_faces(self):
         """ Returns the vertices of each face in draw order (ACW) for the 3D cell
         """
@@ -204,10 +175,27 @@ class Cell:
 
             return False
     
+@classmethod
+def get_edges_from_indices(indices):
+    """
+    Gets the edges from vertices given.
+    Edges will be found when the indices difference
+    has a length of 1. I.e sum(index1 - index2)) = 1
+    NOTE: Should be the same for all cells for the particular dimension.
+            Therefore it only needs to be run once.
+    """
+    edges = []
+    # Compare every index set with every other index set
+    for ind1 in range(len(indices)-1):
+        for ind2 in range(ind1+1, len(indices)):
+            if abs(np.sum( indices[ind1] - indices[ind2] )) == 1:
+                edges.append([ind1, ind2])
 
+    print("FOUND EDGES:", edges)
+    return np.array(edges)
 
 def _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy):
-    intersections, k_combos = construction_sets[js[0]].get_intersections_with(k_range, [construction_sets[js[1]], construction_sets[js[2]]])
+    intersections, k_combos = construction_sets[js[0]].get_intersections_with(k_range, [construction_sets[j] for j in js[1:]])
     # DEBUG print("Intersections between plane sets %s : %d" % (js, len(intersections)))
 
     for i, intersection in enumerate(intersections):
@@ -252,6 +240,7 @@ def dualgrid_method(basis, k_range=3, shape_accuracy=4):
 
     # Find intersections between each of the plane sets
     for js in itertools.combinations(range(len(construction_sets)), basis.dimensions):
+        print("js:", js)
         _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy)
 
     return cells #, possible_cells

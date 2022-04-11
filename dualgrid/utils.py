@@ -15,7 +15,10 @@ def generate_offsets(num, random, below_one=True, sum_zero=False):
     else:
         rng = np.random.default_rng(37123912)  # Arbitrary seed
 
-    offsets = rng.random(num) / num
+    offsets = rng.random(num)
+    if below_one:
+        offsets /= num
+
     if sum_zero:
         offsets[-1] = -np.sum(offsets)
 
@@ -155,8 +158,42 @@ def verts_and_edges_from_cells(cells, filter=no_filter, filter_whole_cells=True,
 
 """ RENDERING
 """
-def render_verts_and_edges(
-    ax,
+
+def render_wire(verts, edges, **kwargs):
+    if len(verts[0]) == 2:
+        _render_2D_wire(verts, edges, **kwargs)
+    else:
+        _render_3D_wire(verts, edges, **kwargs)
+
+def _render_2D_wire(
+    verts,
+    edges,
+    vert_size=15.0,
+    vert_alpha=1.0,
+    edge_thickness=4.0,
+    edge_alpha=0.5,
+    vert_colour="r",
+    edge_colour="k",
+    axis_size=5.0,
+    filter_centre=None
+):
+    fig, ax = plt.subplots(1, figsize=(5, 5), dpi=200)
+    ax.axis("equal")
+    # colour_palette = cm.get_cmap(clrmap, 8)
+
+    for edge in edges:
+        vs = np.array([verts[e] for e in edge])
+        ax.plot(vs[:,0], vs[:,1], "%s-" % edge_colour, linewidth=edge_thickness, alpha=edge_alpha)
+
+    ax.plot(verts[:,0], verts[:,1], "%s." % vert_colour, markersize=vert_size, alpha=vert_alpha)
+
+    plt.xlim(-plotrange, plotrange)
+    plt.ylim(-plotrange, plotrange)
+    plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
+
+
+
+def _render_3D_wire(
     verts,
     edges,
     vert_size=15.0,
@@ -168,6 +205,10 @@ def render_verts_and_edges(
     axis_size=5.0,
     filter_centre=None,
 ):
+
+    # Set up matplotlib axes.
+    ax = plt.axes(projection="3d")
+
     if not filter_centre:
         # Find centre of interest
         filter_centre = np.mean(verts, axis=0)
@@ -197,58 +238,69 @@ def render_verts_and_edges(
     ax.set_zlabel("z")
 
 
-def render_cells(
-        ax,
-        cell_dict,
-        colormap_str,
-        filter=no_filter,
-        filter_centre=None,
-        filter_args=[],
-        fast_filter=False, # False: checks 1 node per rhombohedron, fast checks all 8 are within range
-        shape_opacity=0.6,
-        axis_size=5.0,
-):
-    """ Renders cells with matplotlib
-    Has to filter whole cells due to the nature of the render.
-    """
-    clrmap = cm.get_cmap(colormap_str)
+# def _get_cell_size_ratio(cell, cell_edges):
+#     # Well defined for 2D and 3D, truncate to 3D for ND.
+#     dims = len(cell.verts[0])
+#     if dims == 2:
+#         max( np.dot(cell_edges[0]) )
+#     else:
+#         return _triple_product()
 
-    if not filter_centre:
-        # Find centre of interest
-        filter_centre = get_centre_of_interest(cell_dict)
+    
 
-    for volume, cells in cell_dict.items():
-        color = clrmap(volume)
+# def render_cells(
+#         ax,
+#         cells,
+#         colormap_str,
+#         filter=no_filter,
+#         filter_centre=None,
+#         filter_args=[],
+#         fast_filter=False, # False: checks 1 node per rhombohedron, fast checks all 8 are within range
+#         shape_opacity=0.6,
+#         axis_size=5.0,
+# ):
+#     """ Renders cells with matplotlib
+#     Has to filter whole cells due to the nature of the render.
+#     """
+#     clrmap = cm.get_cmap(colormap_str)
 
-        for c in cells:
-            in_render = True
-            # apply filter if there is one
-            if filter:
-                in_render = c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter)
+#     if not filter_centre:
+#         # Find centre of interest
+#         filter_centre = get_centre_of_interest(cell_dict)
 
-            if in_render:
-                faces = c.get_faces()
-                shape_col = Poly3DCollection(faces, facecolors=color, linewidths=0.2, edgecolors="k", alpha=shape_opacity)
-                ax.add_collection(shape_col)
+#     for c in cells:
+#         clrindex = c.get_size_ratio()
+#         color = clrmap(clrindex)
+
+#         in_render = True
+#         # apply filter if there is one
+#         if filter:
+#             in_render = c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter)
+
+#         if in_render:
+#             faces = c.get_faces()
+#             shape_col = Poly3DCollection(faces, facecolors=color, linewidths=0.2, edgecolors="k", alpha=shape_opacity)
+#             ax.add_collection(shape_col)
 
 
-    # Set axis scaling equal and display
-    world_limits = ax.get_w_lims()
-    ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
+#     # Set axis scaling equal and display
+#     world_limits = ax.get_w_lims()
+#     ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
 
-    axes_bounds = [
-        filter_centre - np.array([axis_size, axis_size, axis_size]),  # Lower
-        filter_centre + np.array([axis_size, axis_size, axis_size])  # Upper
-    ]
-    ax.set_xlim(axes_bounds[0][0], axes_bounds[1][0])
-    ax.set_ylim(axes_bounds[0][1], axes_bounds[1][1])
-    ax.set_zlim(axes_bounds[0][2], axes_bounds[1][2])
+#     axes_bounds = [
+#         filter_centre - np.array([axis_size, axis_size, axis_size]),  # Lower
+#         filter_centre + np.array([axis_size, axis_size, axis_size])  # Upper
+#     ]
+#     ax.set_xlim(axes_bounds[0][0], axes_bounds[1][0])
+#     ax.set_ylim(axes_bounds[0][1], axes_bounds[1][1])
+#     ax.set_zlim(axes_bounds[0][2], axes_bounds[1][2])
 
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
+#     ax.set_xlabel("x")
+#     ax.set_ylabel("y")
+#     ax.set_zlabel("z")
 
-    return filter_centre
+#     return filter_centre
+
 
 """ STL Output
 """
