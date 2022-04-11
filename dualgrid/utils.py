@@ -180,6 +180,10 @@ def graph_from_cells(cells, filter=None, filter_whole_cells=True, filter_args=[]
 """ RENDERING
 """
 
+def vertex_positions_from_graph(G):
+    return np.array([v[1]["position"] for v in G.nodes.data()])
+
+
 def render_graph(G, **kwargs):
     if len(list(G.nodes(data=True))[0][1]["position"]) == 2:
         _render_2D_wire(G, **kwargs)
@@ -204,18 +208,15 @@ def _render_2D_wire(
         vs = np.array([G.nodes[e]["position"] for e in edge])
         ax.plot(vs[:,0], vs[:,1], "%s-" % edge_colour, linewidth=edge_thickness, alpha=edge_alpha)
 
-    verts = np.array([v[1]["position"] for v in G.nodes.data()])
+    verts = vertex_positions_from_graph(G)
     ax.plot(verts[:,0], verts[:,1], "%s." % vert_colour, markersize=vert_size, alpha=vert_alpha)
 
     plt.xlim(-axis_size, axis_size)
     plt.ylim(-axis_size, axis_size)
     plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
 
-
-
 def _render_3D_wire(
-    verts,
-    edges,
+    G,
     vert_size=15.0,
     vert_alpha=1.0,
     edge_thickness=4.0,
@@ -228,14 +229,16 @@ def _render_3D_wire(
 
     # Set up matplotlib axes.
     ax = plt.axes(projection="3d")
+    # Aggregate vertex positions
+    verts = np.array([v[1]["position"] for v in G.nodes.data()])
 
     if not filter_centre:
         # Find centre of interest
         filter_centre = np.mean(verts, axis=0)
 
     # Plot edges
-    for edge in edges:
-        vs = np.array([verts[e] for e in edge])
+    for edge in G.edges:
+        vs = np.array([G.nodes[e]["position"] for e in edge])
         ax.plot(vs[:,0], vs[:,1], vs[:,2], "%s-" % edge_colour, linewidth=edge_thickness, alpha=edge_alpha)
 
     # Plot vertices
@@ -325,6 +328,41 @@ def _render_3D_wire(
 """ STL Output
 """
 def generate_wire_mesh(
+    G,
+    wire_radius=0.1,
+    vertex_radius=None,
+    mesh_min_length=0.005,   # Arbitrary defaults
+    mesh_max_length=0.05,
+    **kwargs                # Keyword arguments to the mesh generator
+):
+    # Get vertex positions
+    verts = vertex_positions_from_graph(G)
+    # Make wiremesh and saves to stl file
+    if not vertex_radius:
+        vertex_radius = wire_radius
+
+    print("CELL COUNT:", len(verts)//8)
+
+    with pygmsh.occ.Geometry() as geom:       # Use CAD-like commands
+        geom.characteristic_length_max = mesh_max_length
+        geom.characteristic_length_min = mesh_min_length
+
+        for v in verts:
+            geom.add_ball(v, vertex_radius)
+
+        for edge in G.edges:
+            vs = np.array([G.nodes[e]["position"][:3] for e in edge]) # Truncate to 3D
+            geom.add_cylinder(vs[0], vs[1] - vs[0], wire_radius)
+
+        mesh = geom.generate_mesh(**kwargs)
+
+
+    print("CELL COUNT:", len(verts)//8)
+
+    return mesh
+
+"""
+def generate_wire_mesh(
         cell_dict,
         wire_radius=0.1,
         vertex_radius=None,
@@ -361,6 +399,7 @@ def generate_wire_mesh(
     print("CELL COUNT:", len(verts)//8)
 
     return mesh
+"""
 
 def generate_solid_mesh(cell_dict, **kwargs):
     with pygmsh.geo.Geometry() as geom:
