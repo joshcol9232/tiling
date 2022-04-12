@@ -60,6 +60,15 @@ def hypercubic_basis(random_offsets=True):
         np.array([0.0, 0.0, 0.0, 1.0]),
     ]), generate_offsets(4, random_offsets))
 
+def cube5D_basis(random_offsets=True):
+    return dg.Basis(np.array([
+        np.array([1.0, 0.0, 0.0, 0.0, 0.0]),
+        np.array([0.0, 1.0, 0.0, 0.0, 0.0]),
+        np.array([0.0, 0.0, 1.0, 0.0, 0.0]),
+        np.array([0.0, 0.0, 0.0, 1.0, 0.0]),
+        np.array([0.0, 0.0, 0.0, 0.0, 1.0]),
+    ]), generate_offsets(5, random_offsets))
+
 def surface_with_n_rotsym(n, sum_to_zero=False, below_one=False, random_offsets=True):
     """
     Basis for generating a 2D structure with `n` rotational symmetry.
