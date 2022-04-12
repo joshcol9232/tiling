@@ -18,9 +18,15 @@ k_range = 5
 # Run the algorithm. k_ranges sets the number of construction planes used in the method.
 # The function outputs a list of Cell objects.
 cells = dg.dualgrid_method(basis, k_range=k_range)
-G = dg.utils.graph_from_cells(cells, filter=dg.utils.is_point_within_cube, filter_args=[filt_dist], fast_filter=False)
+# Filter the output cells by some function. Pre-defined ones are: is_point_within_cube, is_point_within_radius.
+# Then outputs a networkx graph with real space positions and indices of each node embedded.
+G = dg.utils.graph_from_cells(cells, filter=dg.utils.is_point_within_cube, filter_args=[filt_dist])
 
 print("Generated graph.")
 
+# Render the graph using matplotlib. Support for 2D and 3D crystals, 4D and above get's truncated.
+# i.e, First 3 elements of vectors are plotted.
+# Built-in plotting functions in networkx can be used to view the graph form in 2D.
+# See networkx's documentation for more
 dg.utils.render_graph(G)
 plt.show()
