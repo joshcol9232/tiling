@@ -51,29 +51,18 @@ def icosahedral_basis(random_offsets=True):
     icos.append(np.array([0.0, 0.0, 1.0]))
     return dg.Basis(np.array(icos), offsets)
 
+def n_dimensional_cubic_basis(dims, random_offsets=True):
+    """
+    Returns an N-dimensional cubic basis.
+    dims: N
+    """
+    offsets = generate_offsets(dims, random_offsets)
+    basis_vecs = np.asarray(np.eye(dims))
+    return dg.Basis(basis_vecs, offsets)
+
 def cubic_basis(random_offsets=True):
-    return dg.Basis(np.array([
-        np.array([1.0, 0.0, 0.0]),
-        np.array([0.0, 1.0, 0.0]),
-        np.array([0.0, 0.0, 1.0])
-    ]), generate_offsets(3, random_offsets))
+    return n_dimensional_cubic_basis(3)
 
-def hypercubic_basis(random_offsets=True):
-    return dg.Basis(np.array([
-        np.array([1.0, 0.0, 0.0, 0.0]),
-        np.array([0.0, 1.0, 0.0, 0.0]),
-        np.array([0.0, 0.0, 1.0, 0.0]),
-        np.array([0.0, 0.0, 0.0, 1.0]),
-    ]), generate_offsets(4, random_offsets))
-
-def cube5D_basis(random_offsets=True):
-    return dg.Basis(np.array([
-        np.array([1.0, 0.0, 0.0, 0.0, 0.0]),
-        np.array([0.0, 1.0, 0.0, 0.0, 0.0]),
-        np.array([0.0, 0.0, 1.0, 0.0, 0.0]),
-        np.array([0.0, 0.0, 0.0, 1.0, 0.0]),
-        np.array([0.0, 0.0, 0.0, 0.0, 1.0]),
-    ]), generate_offsets(5, random_offsets))
 
 def surface_with_n_rotsym(n, sum_to_zero=False, below_one=False, random_offsets=True):
     """
