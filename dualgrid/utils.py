@@ -11,6 +11,13 @@ import networkx as nx
 """ OFFSET generation
 """
 def generate_offsets(num, random, below_one=False, sum_zero=False):
+    """
+    Generates offsets for use in the dualgrid method.
+    num: Number of offsets to generate. Usually the same as the number of basis vectors.
+    random: Generate random offsets? Or the same random ones each time (fixed seed).
+    below_one: Keep all of the offsets below one - divides by num. Only makes a difference when sum_zero=True
+    sum_zero: Make the offsets sum to 0. For example Penrose tiling offsets must sum to 0.
+    """
     if random:
         rng = np.random.default_rng(int(time.time() * 10))
     else:
@@ -31,7 +38,6 @@ def generate_offsets(num, random, below_one=False, sum_zero=False):
     Various pre-defined bases to play around with
 """
 def icosahedral_basis(random_offsets=True):
-    # Generate grid offsets for use in the algorithm.
     offsets = generate_offsets(6, random_offsets)
 
     # From: https://physics.princeton.edu//~steinh/QuasiPartII.pdf
@@ -85,9 +91,6 @@ def surface_with_n_rotsym(n, sum_to_zero=False, below_one=False, random_offsets=
 def penrose_basis(random_offsets=True):
     return surface_with_n_rotsym(5, sum_to_zero=True, below_one=True, random_offsets=random_offsets)
 
-def ammann_basis(random_offsets=True):
-    return surface_with_n_rotsym(8)  # TODO: Do you need to sum to 0 for ammann?
-
 def hexagonal_basis(random_offsets=True):
     return dg.Basis(np.array([
         np.array([1.0, 0.0, 0.0]),
@@ -115,7 +118,8 @@ def is_point_within_cube(r, filter_centre, size):
     return np.sum([abs(d) > sizediv2 for d in diff]) == 0
 
 def get_centre_of_interest(cells):
-    """ Used to centre the camera/filter on the densest part of the generated crystal.
+    """
+    Used to centre the camera/filter on the densest part of the generated crystal.
     """
     all_verts = []
     for c in cells:
@@ -127,9 +131,10 @@ def get_centre_of_interest(cells):
 """ Graph
 """
 def graph_from_cells(cells, filter=None, filter_whole_cells=True, filter_args=[], filter_centre=None, fast_filter=False):
-    """ Returns a list of all vertices and edges with no duplicates, given a
-        list of cells.
-        Takes a function to filter out points with, along with it's arguments
+    """ 
+    Returns a list of all vertices and edges with no duplicates, given a
+    list of cells.
+    Takes a function to filter out points with, along with it's arguments
     """
     unique_indices = []  # Edges will be when distance between indices is 1
     vert_arr_indices = []
@@ -277,6 +282,7 @@ def _render_3D_wire(
     ax.set_zlabel("z")
 
 
+# TODO: Needs updating
 # def _get_cell_size_ratio(cell, cell_edges):
 #     # Well defined for 2D and 3D, truncate to 3D for ND.
 #     dims = len(cell.verts[0])
