@@ -5,14 +5,19 @@ import numpy as np
 
 # Make a Basis object. There are some presets available in the `utils`.
 # basis = dg.utils.ammann_basis()
-basis = dg.utils.surface_with_n_rotsym(7)
+basis = dg.utils.surface_with_n_rotsym(7)   # 2D structure with 7-fold rotational symmetry
 # basis = dg.utils.icosahedral_basis()
 # basis = dg.utils.hypercubic_basis()
 # basis = dg.utils.cube5D_basis()
 
-# Set the filtering distance. In this example we will take a 1x1 cube out of the centre of the
+# Set the filtering distance. In this example we will take a cube out of the centre of the
 # generated structure.
+# Note that you may want to use smaller numbers here for 3D+ structures as 
+# matplotlib starts to struggle with large numbers of shapes.
 filt_dist = 10.0
+# Set the k range, i.e the number of construction planes used in generating the vertices.
+# In 2D this corresponds to having line sets with lines of index -1, 0, 1 for a k range of 2 for example.
+# Higher k_range -> more vertices generated.
 k_range = 5
 
 # Run the algorithm. k_ranges sets the number of construction planes used in the method.
