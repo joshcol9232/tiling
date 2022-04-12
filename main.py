@@ -13,11 +13,11 @@ basis = dg.utils.surface_with_n_rotsym(7)   # 2D structure with 7-fold rotationa
 # generated structure.
 # Note that you may want to use smaller numbers here for 3D+ structures as 
 # matplotlib starts to struggle with large numbers of shapes.
-filt_dist = 2.0
+filt_dist = 10.0
 # Set the k range, i.e the number of construction planes used in generating the vertices.
 # In 2D this corresponds to having line sets with lines of index -1, 0, 1 for a k range of 2 for example.
 # Higher k_range -> more vertices generated.
-k_range = 2
+k_range = 4
 
 # Run the algorithm. k_ranges sets the number of construction planes used in the method.
 # The function outputs a list of Cell objects.
