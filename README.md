@@ -12,4 +12,4 @@ pre-defined bases. See `main.py` for some examples.
 - `numpy`
 - `matplotlib`
 - `networkx`
-- `pymesh`
+- `pygmesh`
