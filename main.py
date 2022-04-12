@@ -30,7 +30,10 @@ print("Generated graph.")
 
 # Render the graph using matplotlib. Support for 2D and 3D crystals, 4D and above gets truncated.
 # i.e, First 3 elements of vectors are plotted.
-# Built-in plotting functions in networkx can be used to view the graph form in 2D.
-# See networkx's documentation for more
 dg.utils.render_graph(G)
 plt.show()
+
+# Built-in plotting functions in networkx can be used to view the graph form in 2D.
+# See networkx's documentation for more
+# nx.draw_circular(G)
+# plt.show()
