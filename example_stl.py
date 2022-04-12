@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 basis = dg.utils.icosahedral_basis()
 
-filt_dist = 2.0
+filt_dist = 1.5
 cells = dg.dualgrid_method(basis, k_range=3)
 G = dg.utils.graph_from_cells(cells, filter=dg.utils.is_point_within_cube, filter_args=[filt_dist])
 print("Generated graph.")

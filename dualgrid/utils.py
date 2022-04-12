@@ -61,7 +61,7 @@ def n_dimensional_cubic_basis(dims, random_offsets=True):
     return dg.Basis(basis_vecs, offsets)
 
 def cubic_basis(random_offsets=True):
-    return n_dimensional_cubic_basis(3)
+    return n_dimensional_cubic_basis(3, random_offsets=random_offsets)
 
 
 def surface_with_n_rotsym(n, sum_to_zero=False, below_one=False, random_offsets=True):
@@ -184,12 +184,16 @@ def graph_from_cells(cells, filter=None, filter_whole_cells=True, filter_args=[]
 
 """ RENDERING
 """
-
 def vertex_positions_from_graph(G):
+    """
+    Extracts vertex positions from the graph data.
+    """
     return np.array([v[1]["position"] for v in G.nodes.data()])
 
-
 def render_graph(G, **kwargs):
+    """
+    Render the graph as nodes connected by edges.
+    """
     if len(list(G.nodes(data=True))[0][1]["position"]) == 2:
         _render_2D_wire(G, **kwargs)
     else:
@@ -272,15 +276,17 @@ def _render_3D_wire(
 
 
 # TODO: Needs updating
-# def _get_cell_size_ratio(cell, cell_edges):
-#     # Well defined for 2D and 3D, truncate to 3D for ND.
-#     dims = len(cell.verts[0])
-#     if dims == 2:
-#         max( np.dot(cell_edges[0]) )
-#     else:
-#         return _triple_product()
-
-    
+def _get_cell_size_ratio(cell):
+    # Well defined for 2D and 3D, truncate to 3D for ND.
+    # cell_edges should be decided beforehand and is
+    # the same for every cell. 2D and 3D are known,
+    # 4D and above cannot be rendered anyway (currently)
+    dims = len(cell.verts[0])
+    if dims == 2:
+        # Every cell
+        return 1.0 - np.min( np.dot(cell_edges[0]) )
+    else:
+        return _triple_product(cell[])
 
 # def render_cells(
 #         ax,

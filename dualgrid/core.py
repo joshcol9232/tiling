@@ -58,8 +58,7 @@ def _get_neighbours(intersection, js, ks, basis):
     # Each possible neighbour of intersection. See eq. 4.5 in de Bruijn paper
     # For example:
     # [0, 0], [0, 1], [1, 0], [1, 1] for 2D
-    dimensions = len(ks)
-    directions = np.array(list(itertools.product(*[[0, 1] for _i in range(dimensions)])))
+    directions = np.array(list(itertools.product(*[[0, 1] for _i in range(basis.dimensions)])))
 
     indices = basis.gridspace(intersection)
 
@@ -74,7 +73,7 @@ def _get_neighbours(intersection, js, ks, basis):
     neighbours = [ np.array([ v for v in indices ]) for _i in range(len(directions)) ]
 
     # Quick note: Kronecker delta function -> (i == j) = False (0) or True (1) in python. Multiplication of bool is allowed
-    deltas = [np.array([(j == js[i]) * 1 for j in range(len(basis.vecs))]) for i in range(dimensions)]
+    deltas = [np.array([(j == js[i]) * 1 for j in range(len(basis.vecs))]) for i in range(basis.dimensions)]
 
     # Apply equation 4.5 in de Bruijn's paper 1, expanded for any basis len and extra third dimension
     for i, e in enumerate(directions): # e Corresponds to epsilon in paper
@@ -230,13 +229,7 @@ def dualgrid_method(basis, k_range=3, shape_accuracy=4):
     # Get each set of parallel planes
     construction_sets = [ ConstructionSet(e, basis.offsets[i], i, k_range) for (i, e) in enumerate(basis.vecs) ]
 
-    """ OLD dict method
-    cell_dict = {}
-    for possible_volume in possible_cells.keys():
-        cell_dict[possible_volume] = []
-    """
     cells = []
-
     # Find intersections between each of the plane sets
     for js in itertools.combinations(range(len(construction_sets)), basis.dimensions):
         _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy)
