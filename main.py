@@ -4,7 +4,8 @@ import networkx as nx
 import numpy as np
 
 # Make a Basis object. There are some presets available in the `utils`.
-basis = dg.utils.surface_with_n_rotsym(11, centred=True)   # 2D structure with 11-fold rotational symmetry
+R = 8
+basis = dg.utils.surface_with_n_rotsym(R, centred=True)   # 2D structure with 11-fold rotational symmetry
 # basis = dg.utils.penrose_basis()          # Penrose tiling.
 # basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
 # basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
@@ -18,7 +19,9 @@ filt_dist = 11.0
 # Set the k range, i.e the number of construction planes used in generating the vertices.
 # In 2D this corresponds to having line sets with lines of index -1, 0, 1 for a k range of 2 for example.
 # Higher k_range -> more vertices generated.
-k_range = 2
+k_range = 8
+
+axis_size = 20  # Size of matplotlib axis
 
 # NOTE: It is advised to use smaller numbers here for 3D+ structures as 
 # matplotlib starts to struggle with large numbers of shapes. I have
@@ -26,6 +29,7 @@ k_range = 2
 if basis.dimensions > 2:
     filt_dist = 2.0
     k_range = 2
+    axis_size = 3
 
 # Run the algorithm. k_ranges sets the number of construction planes used in the method.
 # The function outputs a list of Cell objects.
@@ -51,17 +55,24 @@ else:
 # Render the graph using matplotlib. Support for 2D and 3D crystals, 4D and above gets truncated.
 # i.e, First 3 elements of vectors are plotted.
 if basis.dimensions == 2:   # Fill 2D tiling with colour purely for aesthetics.
-    dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=0.0, axis_size=10)
+    dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=0.0, axis_size=axis_size)
     # dg.utils.render_graph_wire(G, ax) # Uncomment to see graph render.
 else:
-    dg.utils.render_graph_wire(G, ax, edge_alpha=1.0)
+    dg.utils.render_cells_solid(cells, ax, axis_size=axis_size)
+    # dg.utils.render_graph_wire(G, ax, edge_alpha=1.0)
 
 
-plt.title("Change basis in main.py to see other examples.")
-plt.show()
+# plt.title("Change basis in main.py to see other examples.")
+# plt.show()
 
 # Built-in plotting functions in networkx can be used to view the graph form in 2D.
 # See networkx's documentation for more. A simple example is below.
 
 # nx.draw_circular(G)
 # plt.show()
+
+ax.set_axis_off()
+plt.title("%d-Fold rotationally symmetrical tiling." % R)
+# plt.title("Icosahedral basis centred.")
+plt.savefig("%d-fold_output.png" % R, dpi=400, bbox_inches='tight', transparent=True, pad_inches=0)
+# plt.savefig("icosahedral_quasi_output.png", dpi=400, bbox_inches='tight', transparent=True, pad_inches=0)
