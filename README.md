@@ -1,6 +1,11 @@
 # tiling
 Tool for generating arbitrary rhombic tilings in arbitrary numbers of dimensions, based on the de Bruijn grid method.
 
+![9-Fold](9-fold_output.png?raw=true "9-Fold rotationally symmetric tiling.")
+
+![3D Icosahedral](icosahedral_quasi_output.png?raw=true "Icosahedral quasicrystal seen down an axis of symmetry.")
+
+
 ## Usage:
 
 The `dualgrid` module contains the method itself, which will return a list of rhombohedra. There are then various
