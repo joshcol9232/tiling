@@ -12,14 +12,24 @@ import networkx as nx
 
 """ OFFSET generation
 """
-def generate_offsets(num, random, below_one=False, sum_zero=False):
+def offsets_fixed_around_centre(n):
+    """
+    Gives offsets that give a tiling around centre of rotation.
+    """
+    return np.array([1/n for _i in range(n)])
+
+def generate_offsets(num, random, below_one=False, sum_zero=False, centred=False):
     """
     Generates offsets for use in the dualgrid method.
     num: Number of offsets to generate. Usually the same as the number of basis vectors.
     random: Generate random offsets? Or the same random ones each time (fixed seed).
     below_one: Keep all of the offsets below one - divides by num. Only makes a difference when sum_zero=True
     sum_zero: Make the offsets sum to 0. For example Penrose tiling offsets must sum to 0.
+    centred: Give a tiling centred around the centre of rotation. (NOTE: Not sure if this is working in 3D)
     """
+    if centred:
+        return offsets_fixed_around_centre(num)
+
     if random:
         rng = np.random.default_rng(int(time.time() * 10))
     else:
@@ -32,7 +42,6 @@ def generate_offsets(num, random, below_one=False, sum_zero=False):
     if sum_zero:
         offsets[-1] = -np.sum(offsets)
 
-    print("OFFSETS:", offsets)
     return offsets
 
 
@@ -66,7 +75,7 @@ def cubic_basis(random_offsets=True):
     return n_dimensional_cubic_basis(3, random_offsets=random_offsets)
 
 
-def surface_with_n_rotsym(n, sum_to_zero=False, below_one=False, random_offsets=True):
+def surface_with_n_rotsym(n, random_offsets=True, **kwargs):
     """
     Basis for generating a 2D structure with `n` rotational symmetry.
     """
@@ -75,7 +84,7 @@ def surface_with_n_rotsym(n, sum_to_zero=False, below_one=False, random_offsets=
         n //= 2   # To stop identical basis sets being created for even symmetries
 
     vecs = np.array([[np.cos(j * np.pi * 2.0/N), np.sin(j * np.pi * 2.0/N)] for j in range(n)])
-    offsets = generate_offsets(n, random_offsets, below_one=below_one, sum_zero=sum_to_zero)
+    offsets = generate_offsets(n, random_offsets, **kwargs)
 
     return dg.Basis(vecs, offsets)
 
