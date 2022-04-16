@@ -3,6 +3,8 @@ import dualgrid as dg
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib import cm
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
 import pygmsh
 import time
 import networkx as nx
@@ -61,7 +63,7 @@ def n_dimensional_cubic_basis(dims, random_offsets=True):
     return dg.Basis(basis_vecs, offsets)
 
 def cubic_basis(random_offsets=True):
-    return n_dimensional_cubic_basis(3)
+    return n_dimensional_cubic_basis(3, random_offsets=random_offsets)
 
 
 def surface_with_n_rotsym(n, sum_to_zero=False, below_one=False, random_offsets=True):
@@ -119,58 +121,41 @@ def get_centre_of_interest(cells):
 
 """ Graph
 """
-def graph_from_cells(cells, filter=None, filter_whole_cells=True, filter_args=[], filter_centre=None, fast_filter=False):
+def filtered_graph_from_cells(cells, filter=None, filter_args=[], filter_centre=None, fast_filter=False):
     """ 
-    Returns a list of all vertices and edges with no duplicates, given a
-    list of cells.
-    Takes a function to filter out points with, along with it's arguments
+    Returns a networkx graph given a list of cells,
+    along with the filtered list of cells.
+    The position and indices of the vertex is embedded in each node.
+    Takes a function to filter out points with, along with it's arguments.
     """
     unique_indices = []  # Edges will be when distance between indices is 1
     vert_arr_indices = []
+    cell_vertices = [] # Cell vertices (array index form).
+                       # [ [cell_0_vertices,], ... , [cell_N_vertices,]  ]
     G = nx.Graph()
-
-    curr_node_count = 0
 
     if not filter_centre:
         # Find centre of interest
         filter_centre = get_centre_of_interest(cells)
         print("COI:", filter_centre)
 
-    for c in cells:
-        if filter and filter_whole_cells:
-            # Check whole cell is in filter before continuing
-            include_cell = c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter)
-            if include_cell:
-                for arr_index, i in enumerate(c.indices):
-                    i = list(i)
-                    if i not in unique_indices:
-                        node_ind = curr_node_count + arr_index
-                        unique_indices.append(i)
-                        vert_arr_indices.append(node_ind)
-                        G.add_node(
-                            node_ind,
-                            position=c.verts[arr_index],
-                            indices=i,
-                        )
-        else:
-            for arr_index, i in enumerate(c.indices):
-                i = list(i)
-                # Check vertex inside filtering distance
-                in_range = True
-                if filter:  # If a filtering function is given, then filter out the point
-                    in_range = filter(c.verts[arr_index], filter_centre, *filter_args)
+    cells = np.array(cells)
+    if filter:
+        filter_results = [c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter) for c in cells]
+        cells = cells[filter_results]  # filter the cells out
 
-                if in_range and i not in unique_indices:
-                    unique_indices.append(i)
-                    node_ind = curr_node_count + arr_index
-                    vert_arr_indices.append(node_ind)
-                    G.add_node(
-                        node_ind,
-                        position=c.verts[arr_index],
-                        indices=i,
-                    )
-        
-        curr_node_count += len(c.verts)
+    for cell_index, c in enumerate(cells):
+        for arr_index, i in enumerate(c.indices):
+            i = list(i)
+            if i not in unique_indices:
+                node_ind = (cell_index * 8) + arr_index
+                unique_indices.append(i)
+                vert_arr_indices.append(node_ind)
+                G.add_node(
+                    node_ind,
+                    position=c.verts[arr_index],
+                    indices=i,
+                )
 
     # Indices with distance 1 are edges
     for i in range(len(unique_indices)-1):
@@ -179,25 +164,30 @@ def graph_from_cells(cells, filter=None, filter_whole_cells=True, filter_args=[]
                 # linked
                 G.add_edge(vert_arr_indices[i], vert_arr_indices[j])
 
-    return G
+    return G, cells
 
 
 """ RENDERING
 """
-
 def vertex_positions_from_graph(G):
+    """
+    Extracts vertex positions from the graph data.
+    """
     return np.array([v[1]["position"] for v in G.nodes.data()])
 
-
-def render_graph(G, **kwargs):
+def render_graph_wire(G, *args, **kwargs):
+    """
+    Render the graph as nodes connected by edges.
+    """
     if len(list(G.nodes(data=True))[0][1]["position"]) == 2:
-        _render_2D_wire(G, **kwargs)
+        _render_2D_wire(G, *args, **kwargs)
     else:
-        _render_3D_wire(G, **kwargs)
+        _render_3D_wire(G, *args, **kwargs)
 
 def _render_2D_wire(
     G,
-    vert_size=5.0,
+    ax,
+    vert_size=7.0,
     vert_alpha=1.0,
     edge_thickness=2.0,
     edge_alpha=1.0,
@@ -206,9 +196,6 @@ def _render_2D_wire(
     axis_size=5.0,
     filter_centre=None
 ):
-    fig, ax = plt.subplots(1, figsize=(5, 5), dpi=200)
-    ax.axis("equal")
-
     for edge in G.edges:
         vs = np.array([G.nodes[e]["position"] for e in edge])
         ax.plot(vs[:,0], vs[:,1], "%s-" % edge_colour, linewidth=edge_thickness, alpha=edge_alpha)
@@ -227,6 +214,7 @@ def _render_2D_wire(
 
 def _render_3D_wire(
     G,
+    ax,
     vert_size=15.0,
     vert_alpha=1.0,
     edge_thickness=4.0,
@@ -236,9 +224,6 @@ def _render_3D_wire(
     axis_size=5.0,
     filter_centre=None,
 ):
-
-    # Set up matplotlib axes.
-    ax = plt.axes(projection="3d")
     # Aggregate vertex positions
     verts = np.array([v[1]["position"] for v in G.nodes.data()])
 
@@ -254,10 +239,6 @@ def _render_3D_wire(
     # Plot vertices
     ax.plot(verts[:,0], verts[:,1], verts[:,2], "%s." % vert_colour, markersize=vert_size, alpha=vert_alpha)
 
-    # Set axis scaling equal and set size
-    world_limits = ax.get_w_lims()
-    ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
-
     axes_bounds = [
         filter_centre[:3] - np.array([axis_size, axis_size, axis_size]),  # Lower
         filter_centre[:3] + np.array([axis_size, axis_size, axis_size])  # Upper
@@ -270,70 +251,156 @@ def _render_3D_wire(
     ax.set_ylabel("y")
     ax.set_zlabel("z")
 
+    # Set axis scaling equal and set size
+    world_limits = ax.get_w_lims()
+    ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
 
-# TODO: Needs updating
-# def _get_cell_size_ratio(cell, cell_edges):
-#     # Well defined for 2D and 3D, truncate to 3D for ND.
-#     dims = len(cell.verts[0])
-#     if dims == 2:
-#         max( np.dot(cell_edges[0]) )
-#     else:
-#         return _triple_product()
 
+def _triple_product(a, b, c):
+    return np.dot( a, np.cross(b, c) )
+
+def _get_cell_size_ratio(cell, decimals):
+    # Well defined for 2D and 3D, truncate to 3D for ND.
+    # cell_edges should be decided beforehand and is
+    # the same for every cell. 2D and 3D are known,
+    # 4D and above cannot be rendered anyway (currently)
+    if len(cell.verts[0]) == 2:
+        dot = abs(np.dot(cell.verts[0] - cell.verts[1], cell.verts[0] - cell.verts[2]))
+            # np.dot(cell.verts)
+        return np.around(dot, decimals=decimals)
+    else:
+        return np.around(abs(_triple_product(cell.verts[1][:3] - cell.verts[0][:3], cell.verts[2][:3] - cell.verts[0][:3], cell.verts[4][:3] - cell.verts[0][:3])), decimals=decimals)
+
+def _render_cells_solid_2D(
+    cells,
+    ax,
+    colourmap_str="viridis",
+    opacity=1.0,
+    edge_thickness=1.0,
+    edge_colour="k",
+    scale=1.0,
+    centre_of_interest=None,
+    axis_size=5.0,
+):
+    def make_polygon(cell_verts, scale):
+         # copy to new array in draw-order
+        verts = np.array([cell_verts[0], cell_verts[1], cell_verts[3], cell_verts[2]])
+        if scale < 1.0:
+            middle = np.mean(verts, axis=0)
+            for v in verts:
+                v -= (v - middle) * (1.0 - scale)
+        
+        return Polygon(verts)
+
+    # Group by smallest internal angle. This will serve as the colour index
+    INDEX_DECIMALS = 4  # Significant figures used in grouping cells together
+    poly_dict = {} # Dictionary of {size index: [matplotlib polygon]}
+
+    for cell_index, c in enumerate(cells):
+        size_ratio = _get_cell_size_ratio(c, INDEX_DECIMALS)
+        p = make_polygon(c.verts, scale)
+        if size_ratio not in poly_dict:
+            poly_dict[size_ratio] = [p]
+        else:
+            poly_dict[size_ratio].append(p)
+
+    # Render
+    clrmap = cm.get_cmap(colourmap_str)
+    for size_ratio, polygons in poly_dict.items():
+        colour = clrmap(size_ratio)
+        shape_coll = PatchCollection(polygons, edgecolor=edge_colour, facecolor=colour, linewidth=edge_thickness, antialiased=True)
+        ax.add_collection(shape_coll)
+
+    if not centre_of_interest:
+        # Find coi
+        centre_of_interest = get_centre_of_interest(cells)
+
+    plt.xlim(centre_of_interest[0] - axis_size, centre_of_interest[0] + axis_size)
+    plt.ylim(centre_of_interest[1] - axis_size, centre_of_interest[1] + axis_size)
+    plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
     
 
-# def render_cells(
-#         ax,
-#         cells,
-#         colormap_str,
-#         filter=None,
-#         filter_centre=None,
-#         filter_args=[],
-#         fast_filter=False, # False: checks 1 node per rhombohedron, fast checks all 8 are within range
-#         shape_opacity=0.6,
-#         axis_size=5.0,
-# ):
-#     """ Renders cells with matplotlib
-#     Has to filter whole cells due to the nature of the render.
-#     """
-#     clrmap = cm.get_cmap(colormap_str)
 
-#     if not filter_centre:
-#         # Find centre of interest
-#         filter_centre = get_centre_of_interest(cell_dict)
+def _render_cells_solid_3D(
+    cells,
+    ax,
+    colourmap_str="viridis",
+    shape_opacity=0.6,
+    axis_size=5.0,
+    edge_thickness=0.5,
+    edge_colour="k",
+    scale=1.0,
+    centre_of_interest=None,
+):
+    """
+    Renders solid 3D cells with matplotlib
+    """
+    def get_scaled_faces(cell, scale):
+        """
+        Returns the vertices of each face in draw order (ACW) for the 3D cell
+        """
+        # Definitions for each rhombohedron. The same for _every_ 3D rhomb
+        FACE_INDICES = np.array([  # Faces of every rhombohedron (ACW order).
+            [0, 2, 3, 1],
+            [0, 1, 5, 4],
+            [5, 7, 6, 4],
+            [2, 6, 7, 3],
+            [0, 4, 6, 2],
+            [3, 7, 5, 1]
+        ])
+        faces = np.zeros((6, 4, 3), dtype=float)
+        for i, face in enumerate(FACE_INDICES):
+            for j, face_index in enumerate(face):
+                faces[i][j] = cell.verts[face_index][:3]
 
-#     for c in cells:
-#         clrindex = c.get_size_ratio()
-#         color = clrmap(clrindex)
+        if scale < 1.0:
+            # Find middle of rhomb to scale around
+            middle = np.mean(cell.verts, axis=0)[:3]
+            for face in faces:
+                for v in face:
+                    v -= (v - middle) * (1.0 - scale)
 
-#         in_render = True
-#         # apply filter if there is one
-#         if filter:
-#             in_render = c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter)
+        return faces
 
-#         if in_render:
-#             faces = c.get_faces()
-#             shape_col = Poly3DCollection(faces, facecolors=color, linewidths=0.2, edgecolors="k", alpha=shape_opacity)
-#             ax.add_collection(shape_col)
+    clrmap = cm.get_cmap(colourmap_str)
+
+    if not centre_of_interest:
+        # Find centre of interest (mean of all vertices)
+        centre_of_interest = get_centre_of_interest(cells)[:3]
+
+    INDEX_DECIMALS = 4
+    for c in cells:
+        clrindex = _get_cell_size_ratio(c, INDEX_DECIMALS)
+        color = clrmap(clrindex)
+
+        faces = get_scaled_faces(c, scale)
+        shape_col = Poly3DCollection(faces, facecolors=color, linewidths=edge_thickness, edgecolors=edge_colour, alpha=shape_opacity)
+        ax.add_collection(shape_col)
+
+    axes_bounds = [
+        centre_of_interest - np.array([axis_size, axis_size, axis_size]),  # Lower
+        centre_of_interest + np.array([axis_size, axis_size, axis_size])  # Upper
+    ]
+    ax.set_xlim(axes_bounds[0][0], axes_bounds[1][0])
+    ax.set_ylim(axes_bounds[0][1], axes_bounds[1][1])
+    ax.set_zlim(axes_bounds[0][2], axes_bounds[1][2])
+
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
 
 
-#     # Set axis scaling equal and display
-#     world_limits = ax.get_w_lims()
-#     ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
+    # Set axis scaling equal for display
+    world_limits = ax.get_w_lims()
+    ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
 
-#     axes_bounds = [
-#         filter_centre - np.array([axis_size, axis_size, axis_size]),  # Lower
-#         filter_centre + np.array([axis_size, axis_size, axis_size])  # Upper
-#     ]
-#     ax.set_xlim(axes_bounds[0][0], axes_bounds[1][0])
-#     ax.set_ylim(axes_bounds[0][1], axes_bounds[1][1])
-#     ax.set_zlim(axes_bounds[0][2], axes_bounds[1][2])
 
-#     ax.set_xlabel("x")
-#     ax.set_ylabel("y")
-#     ax.set_zlabel("z")
 
-#     return filter_centre
+def render_cells_solid(cells, *args, **kwargs):
+    if len(cells[0].verts[0]) == 2:
+        _render_cells_solid_2D(cells, *args, **kwargs)
+    else:
+        _render_cells_solid_3D(cells, *args, **kwargs)
 
 
 """ STL Output

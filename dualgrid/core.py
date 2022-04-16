@@ -1,20 +1,6 @@
 import numpy as np
 import itertools
 
-
-# Some definitions for each rhombohedron
-FACE_INDICES = np.array([  # Faces of every rhombohedron (ACW order). Worked out on paper
-    [0, 2, 3, 1],
-    [0, 1, 5, 4],
-    [5, 7, 6, 4],
-    [2, 6, 7, 3],
-    [0, 4, 6, 2],
-    [3, 7, 5, 1]
-])
-
-EDGES = np.array([[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [1, 6], [2, 3], [2, 5], [2, 6], [3, 4], [3, 7], [4, 5], [4, 6], [5, 7], [6, 7]])
-
-
 def _get_k_combos(k_range, dimensions):
     return np.array(list(itertools.product(*[ [k for k in range(1-k_range, k_range)] for _d in range(dimensions) ])))
 
@@ -58,8 +44,7 @@ def _get_neighbours(intersection, js, ks, basis):
     # Each possible neighbour of intersection. See eq. 4.5 in de Bruijn paper
     # For example:
     # [0, 0], [0, 1], [1, 0], [1, 1] for 2D
-    dimensions = len(ks)
-    directions = np.array(list(itertools.product(*[[0, 1] for _i in range(dimensions)])))
+    directions = np.array(list(itertools.product(*[[0, 1] for _i in range(basis.dimensions)])))
 
     indices = basis.gridspace(intersection)
 
@@ -74,16 +59,13 @@ def _get_neighbours(intersection, js, ks, basis):
     neighbours = [ np.array([ v for v in indices ]) for _i in range(len(directions)) ]
 
     # Quick note: Kronecker delta function -> (i == j) = False (0) or True (1) in python. Multiplication of bool is allowed
-    deltas = [np.array([(j == js[i]) * 1 for j in range(len(basis.vecs))]) for i in range(dimensions)]
+    deltas = [np.array([(j == js[i]) * 1 for j in range(len(basis.vecs))]) for i in range(basis.dimensions)]
 
     # Apply equation 4.5 in de Bruijn's paper 1, expanded for any basis len and extra third dimension
     for i, e in enumerate(directions): # e Corresponds to epsilon in paper
         neighbours[i] += np.dot(e, deltas)
 
     return neighbours
-
-def _triple_product(a, b, c):
-    return np.dot( a, np.cross(b, c) )
 
 class Basis:
     def __init__(self, vecs, offsets):
@@ -141,25 +123,6 @@ class Cell:
     def __repr__(self):
         return "Cell(%s parents %s)" % (self.indices[0], self.parent_sets)
 
-    # TODO: Fix for general case
-    # def get_faces(self):
-    #     """ Returns the vertices of each face in draw order (ACW) for the 3D cell
-    #     """
-    #     faces = np.zeros((6, 4, 3), dtype=float)
-    #     for i, face in enumerate(FACE_INDICES):
-    #         for j, face_index in enumerate(face):
-    #             faces[i][j] = self.verts[face_index]
-
-    #     return faces    
-    # def get_edges(self):
-    #     """ Returns unordered list of edges
-    #     """
-    #     edges = []
-    #     for edge in EDGES:
-    #         edges.append([self.verts[edge[0]], self.verts[edge[1]]])
-
-    #     return edges
-
     def is_in_filter(self, filter, filter_centre, filter_args=[], fast=False):
         """ Utility function for checking whever the rhombohedron is in rendering distance
         `fast` just checks the first vertex and exits, otherwise if any of the vertices are inside the filter
@@ -209,18 +172,13 @@ def _get_cells_from_construction_sets(construction_sets, js, cells, k_range, bas
 
         vertices_set = np.array(vertices_set)
         c = Cell(vertices_set, indices_set, js)
-        """ OLD
-        # Get volume and add to appropriate list
-        volume = c.get_volume()
-        volume = np.around(volume, shape_accuracy)
-        cell_dict[volume].append(c)
-        """
         cells.append(c)
 
 
 
 def dualgrid_method(basis, k_range=3, shape_accuracy=4):
-    """ de Bruijn dual grid method.
+    """
+    de Bruijn dual grid method.
     Generates and returns cells from basis given in the range given.
     Shape accuracy is the number of decimal places used to classify cell shapes
     Returns: cells, possible cell shapes
@@ -230,14 +188,9 @@ def dualgrid_method(basis, k_range=3, shape_accuracy=4):
     # Get each set of parallel planes
     construction_sets = [ ConstructionSet(e, basis.offsets[i], i, k_range) for (i, e) in enumerate(basis.vecs) ]
 
-    """ OLD dict method
-    cell_dict = {}
-    for possible_volume in possible_cells.keys():
-        cell_dict[possible_volume] = []
-    """
     cells = []
-
     # Find intersections between each of the plane sets
+    # NOTE: Could very easily be made multithreaded (future task?).
     for js in itertools.combinations(range(len(construction_sets)), basis.dimensions):
         _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy)
 
