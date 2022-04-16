@@ -11,7 +11,7 @@ basis = dg.utils.surface_with_n_rotsym(11, centred=True)   # 2D structure with 1
 
 print("OFFSETS:", basis.offsets)
 
-# Set the filtering distance. In this example we will take a cube out of the centre of the
+# Set the filtering distance. In this example we will take a sphere out of the centre of the
 # generated structure.
 filt_dist = 11.0
 
@@ -51,7 +51,7 @@ else:
 # Render the graph using matplotlib. Support for 2D and 3D crystals, 4D and above gets truncated.
 # i.e, First 3 elements of vectors are plotted.
 if basis.dimensions == 2:   # Fill 2D tiling with colour purely for aesthetics.
-    dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=0.0)
+    dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=0.0, axis_size=10)
     # dg.utils.render_graph_wire(G, ax) # Uncomment to see graph render.
 else:
     dg.utils.render_graph_wire(G, ax, edge_alpha=1.0)
