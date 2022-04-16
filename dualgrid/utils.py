@@ -48,8 +48,8 @@ def generate_offsets(num, random, below_one=False, sum_zero=False, centred=False
 """ BASES
     Various pre-defined bases to play around with
 """
-def icosahedral_basis(random_offsets=True):
-    offsets = generate_offsets(6, random_offsets)
+def icosahedral_basis(random_offsets=True, **kwargs):
+    offsets = generate_offsets(6, random_offsets, **kwargs)
 
     # From: https://physics.princeton.edu//~steinh/QuasiPartII.pdf
     sqrt5 = np.sqrt(5)
@@ -62,17 +62,17 @@ def icosahedral_basis(random_offsets=True):
     icos.append(np.array([0.0, 0.0, 1.0]))
     return dg.Basis(np.array(icos), offsets)
 
-def n_dimensional_cubic_basis(dims, random_offsets=True):
+def n_dimensional_cubic_basis(dims, random_offsets=True, **kwargs):
     """
     Returns an N-dimensional cubic basis.
     dims: N
     """
-    offsets = generate_offsets(dims, random_offsets)
+    offsets = generate_offsets(dims, random_offsets, **kwargs)
     basis_vecs = np.asarray(np.eye(dims))
     return dg.Basis(basis_vecs, offsets)
 
-def cubic_basis(random_offsets=True):
-    return n_dimensional_cubic_basis(3, random_offsets=random_offsets)
+def cubic_basis(random_offsets=True, **kwargs):
+    return n_dimensional_cubic_basis(3, random_offsets=random_offsets, **kwargs)
 
 
 def surface_with_n_rotsym(n, random_offsets=True, **kwargs):
@@ -88,15 +88,15 @@ def surface_with_n_rotsym(n, random_offsets=True, **kwargs):
 
     return dg.Basis(vecs, offsets)
 
-def penrose_basis(random_offsets=True):
-    return surface_with_n_rotsym(5, sum_to_zero=True, below_one=True, random_offsets=random_offsets)
+def penrose_basis(random_offsets=True, **kwargs):
+    return surface_with_n_rotsym(5, sum_to_zero=True, below_one=True, random_offsets=random_offsets, **kwargs)
 
-def hexagonal_basis(random_offsets=True):
+def hexagonal_basis(random_offsets=True, **kwargs):
     return dg.Basis(np.array([
         np.array([1.0, 0.0, 0.0]),
         np.array([1.0/2.0, np.sqrt(3)/2.0, 0.0]),
         np.array([0.0, 0.0, 1.0]),
-    ]), generate_offsets(3, random_offsets))
+    ]), generate_offsets(3, random_offsets, **kwargs))
 
 
 """ Filtering functions. Must take form (point, filter_centre, param_1, param_2, ..., param_N)
