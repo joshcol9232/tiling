@@ -16,6 +16,4 @@ pre-defined bases. See `main.py` for some examples.
 
 ## Notes:
 
-- Invalid edges may be generated at the edge of the generated tiling (due to lone tiles on the outside being connected to the rest of the tiling by an edge that may not be valid).
-    Therefore ensure you use a large enough k range so that the portion you filter out is not at the edge,
-    and hence has valid edges.
+- Filtering the generated nodes into a smaller region is important so that outliers are not included in the graph. E.g tiles that are not connected to the rest of the tiling - generate a 2D Penrose tiling without applying a filter and zoom out if you want to see for yourself. This is one minor caveat of the de Bruijn dualgrid method, but it is easily remedied by filtering.

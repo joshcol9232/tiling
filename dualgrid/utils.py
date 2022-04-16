@@ -187,7 +187,7 @@ def render_graph_wire(G, *args, **kwargs):
 def _render_2D_wire(
     G,
     ax,
-    vert_size=5.0,
+    vert_size=7.0,
     vert_alpha=1.0,
     edge_thickness=2.0,
     edge_alpha=1.0,
@@ -239,10 +239,6 @@ def _render_3D_wire(
     # Plot vertices
     ax.plot(verts[:,0], verts[:,1], verts[:,2], "%s." % vert_colour, markersize=vert_size, alpha=vert_alpha)
 
-    # Set axis scaling equal and set size
-    world_limits = ax.get_w_lims()
-    ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
-
     axes_bounds = [
         filter_centre[:3] - np.array([axis_size, axis_size, axis_size]),  # Lower
         filter_centre[:3] + np.array([axis_size, axis_size, axis_size])  # Upper
@@ -254,6 +250,11 @@ def _render_3D_wire(
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
+
+    # Set axis scaling equal and set size
+    world_limits = ax.get_w_lims()
+    ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
+
 
 def _triple_product(a, b, c):
     return np.dot( a, np.cross(b, c) )
@@ -350,11 +351,11 @@ def _render_cells_solid_3D(
         faces = np.zeros((6, 4, 3), dtype=float)
         for i, face in enumerate(FACE_INDICES):
             for j, face_index in enumerate(face):
-                faces[i][j] = cell.verts[face_index]
+                faces[i][j] = cell.verts[face_index][:3]
 
         if scale < 1.0:
             # Find middle of rhomb to scale around
-            middle = np.mean(cell.verts, axis=0)
+            middle = np.mean(cell.verts, axis=0)[:3]
             for face in faces:
                 for v in face:
                     v -= (v - middle) * (1.0 - scale)
@@ -365,7 +366,7 @@ def _render_cells_solid_3D(
 
     if not centre_of_interest:
         # Find centre of interest (mean of all vertices)
-        centre_of_interest = get_centre_of_interest(cells)
+        centre_of_interest = get_centre_of_interest(cells)[:3]
 
     INDEX_DECIMALS = 4
     for c in cells:
@@ -375,11 +376,6 @@ def _render_cells_solid_3D(
         faces = get_scaled_faces(c, scale)
         shape_col = Poly3DCollection(faces, facecolors=color, linewidths=edge_thickness, edgecolors=edge_colour, alpha=shape_opacity)
         ax.add_collection(shape_col)
-
-
-    # Set axis scaling equal and display
-    world_limits = ax.get_w_lims()
-    ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
 
     axes_bounds = [
         centre_of_interest - np.array([axis_size, axis_size, axis_size]),  # Lower
@@ -392,6 +388,11 @@ def _render_cells_solid_3D(
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_zlabel("z")
+
+
+    # Set axis scaling equal for display
+    world_limits = ax.get_w_lims()
+    ax.set_box_aspect((world_limits[1] - world_limits[0], world_limits[3] - world_limits[2], world_limits[5] - world_limits[4]))
 
 
 
