@@ -84,7 +84,7 @@ def surface_with_n_rotsym(n, random_offsets=True, **kwargs):
         n //= 2   # To stop identical basis sets being created for even symmetries
 
     vecs = np.array([[np.cos(j * np.pi * 2.0/N), np.sin(j * np.pi * 2.0/N)] for j in range(n)])
-    offsets = generate_offsets(n, random_offsets, **kwargs)
+    offsets = generate_offsets(N, random_offsets, **kwargs)[:n]
 
     return dg.Basis(vecs, offsets)
 
@@ -143,7 +143,8 @@ def filtered_graph_from_cells(cells, filter=None, filter_args=[], filter_centre=
                        # [ [cell_0_vertices,], ... , [cell_N_vertices,]  ]
     G = nx.Graph()
 
-    if not filter_centre:
+    if type(filter_centre) == type(None):
+        print("FINDING COI")
         # Find centre of interest
         filter_centre = get_centre_of_interest(cells)
         print("COI:", filter_centre)
@@ -213,7 +214,7 @@ def _render_2D_wire(
     ax.plot(verts[:,0], verts[:,1], "%s." % vert_colour, markersize=vert_size, alpha=vert_alpha)
 
 
-    if not filter_centre:
+    if type(filter_centre) == type(None):
         # Find centre of interest
         filter_centre = np.mean(verts, axis=0)
 
@@ -236,7 +237,7 @@ def _render_3D_wire(
     # Aggregate vertex positions
     verts = np.array([v[1]["position"] for v in G.nodes.data()])
 
-    if not filter_centre:
+    if type(filter_centre) == type(None):
         # Find centre of interest
         filter_centre = np.mean(verts, axis=0)
 
@@ -320,7 +321,7 @@ def _render_cells_solid_2D(
         shape_coll = PatchCollection(polygons, edgecolor=edge_colour, facecolor=colour, linewidth=edge_thickness, antialiased=True)
         ax.add_collection(shape_coll)
 
-    if not centre_of_interest:
+    if type(centre_of_interest) == type(None):
         # Find coi
         centre_of_interest = get_centre_of_interest(cells)
 
@@ -373,7 +374,7 @@ def _render_cells_solid_3D(
 
     clrmap = cm.get_cmap(colourmap_str)
 
-    if not centre_of_interest:
+    if type(centre_of_interest) == type(None):
         # Find centre of interest (mean of all vertices)
         centre_of_interest = get_centre_of_interest(cells)[:3]
 
@@ -433,7 +434,7 @@ def generate_wire_mesh(
         verts = np.array(new_verts)
 
     # Make wiremesh and saves to stl file
-    if not vertex_radius:
+    if type(vertex_radius) == type(None):
         vertex_radius = wire_radius
     print("VERTEX RAD:", vertex_radius)
 
