@@ -5,11 +5,10 @@ def _get_k_combos(k_range, dimensions):
     return np.array(list(itertools.product(*[ [k for k in range(1-k_range, k_range)] for _d in range(dimensions) ])))
 
 class ConstructionSet:
-    def __init__(self, normal, offset, setnum, k_range):
+    def __init__(self, normal, offset, setnum):
         self.normal = normal
         self.offset = offset
         self.setnum = setnum
-        self.k_range = k_range
 
     def get_intersections_with(self, k_range, others):
         """
@@ -192,7 +191,7 @@ def _get_cells_from_construction_sets(construction_sets, js, cells, k_range, bas
 
 
 
-def dualgrid_method(basis, k_range=3, shape_accuracy=4):
+def dualgrid_method(basis, k_range, shape_accuracy=4):
     """
     de Bruijn dual grid method.
     Generates and returns cells from basis given in the range given.
@@ -202,7 +201,7 @@ def dualgrid_method(basis, k_range=3, shape_accuracy=4):
     # possible_cells = basis.get_possible_cells(shape_accuracy)
 
     # Get each set of parallel planes
-    construction_sets = [ ConstructionSet(e, basis.offsets[i], i, k_range) for (i, e) in enumerate(basis.vecs) ]
+    construction_sets = [ ConstructionSet(e, basis.offsets[i], i) for (i, e) in enumerate(basis.vecs) ]
 
     cells = []
     # Find intersections between each of the plane sets
