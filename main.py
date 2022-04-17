@@ -4,10 +4,10 @@ import networkx as nx
 import numpy as np
 
 # Make a Basis object. There are some presets available in the `utils`.
-basis = dg.utils.surface_with_n_rotsym(5, centred=True, sum_zero=True)   # 2D structure with 11-fold rotational symmetry
+basis = dg.utils.surface_with_n_rotsym(11, centred=True, sum_zero=True)   # 2D structure with 11-fold rotational symmetry
 # basis = dg.utils.penrose_basis()          # Penrose tiling.
-# basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
-# basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
+#basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
+#basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
 
 print("OFFSETS:", basis.offsets)
 
@@ -40,7 +40,7 @@ print("Cells found.\nFiltering & generating graph...")
 # Then outputs a networkx graph with real space positions and indices of each node embedded.
 
 # Filter out a radius
-cells = dg.utils.filter_cells(cells, dg.utils.is_point_within_radius, filter_args=[filt_dist], invert_filter=False, filter_centre=np.zeros(2))
+cells = dg.utils.filter_cells(cells, dg.utils.is_point_within_radius, filter_args=[filt_dist], invert_filter=False)
 
 
 # To filter by highest index allowed (not advisable for 3D):
