@@ -117,6 +117,24 @@ def is_point_within_cube(r, filter_centre, size):
 
     return np.sum([abs(d) > sizediv2 for d in diff]) == 0
 
+def contains_value(r, filter_centre, value):
+    """
+    Checks for index "r" within indices. Not for use with real space.
+    """
+    return value in list(r)
+
+def elements_are_below(r, filter_centre, value):
+    """
+    Checks if all elements are below the given value
+    """
+    for element in r:
+        if r > value:
+            return False
+
+    return True
+
+
+
 def get_centre_of_interest(cells):
     """
     Used to centre the camera/filter on the densest part of the generated crystal.
@@ -130,7 +148,7 @@ def get_centre_of_interest(cells):
 
 """ Graph
 """
-def filtered_graph_from_cells(cells, filter=None, filter_args=[], filter_centre=None, fast_filter=False, filter_indices=False):
+def filtered_graph_from_cells(cells, filter=None, filter_args=[], filter_centre=None, fast_filter=False, filter_indices=False, invert_filter=False):
     """ 
     Returns a networkx graph given a list of cells,
     along with the filtered list of cells.
@@ -151,7 +169,7 @@ def filtered_graph_from_cells(cells, filter=None, filter_args=[], filter_centre=
 
     cells = np.array(cells)
     if filter:
-        filter_results = [c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter, filter_indices=filter_indices) for c in cells]
+        filter_results = [c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter, filter_indices=filter_indices, invert_filter=invert_filter) for c in cells]
         cells = cells[filter_results]  # filter the cells out
 
     for cell_index, c in enumerate(cells):
