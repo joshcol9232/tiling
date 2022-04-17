@@ -128,7 +128,7 @@ def elements_are_below(r, filter_centre, value):
     Checks if all elements are below the given value
     """
     for element in r:
-        if r > value:
+        if element > value:
             return False
 
     return True
