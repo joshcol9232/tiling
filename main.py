@@ -38,11 +38,13 @@ print("Cells found.\nFiltering & generating graph...")
 # Filter out a radius
 cells = dg.utils.filter_cells(cells, dg.utils.is_point_within_radius, filter_args=[filt_dist], invert_filter=False, filter_centre=np.zeros(2))
 
+
+# To filter by highest index allowed (not advisable for 3D):
+#cells = dg.utils.filter_cells(cells, filter=dg.utils.elements_are_below, filter_args=[filt_dist], filter_indices=True, invert_filter=False)
+
 # Get networkx graph of generated structure.
 #G = dg.utils.graph_from_cells(cells)
 
-# To filter by highest index allowed (not advisable for 3D):
-#G, cells = dg.utils.filtered_graph_from_cells(cells, filter=dg.utils.elements_are_below, filter_args=[filt_dist], filter_indices=True, invert_filter=False)
 
 # Filtering is important so that outliers are not included in the graph.
 # e.g tiles that are not connected to the rest of the tiling 
