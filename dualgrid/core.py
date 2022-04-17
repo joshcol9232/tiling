@@ -123,19 +123,35 @@ class Cell:
     def __repr__(self):
         return "Cell(%s parents %s)" % (self.indices[0], self.parent_sets)
 
-    def is_in_filter(self, filter, filter_centre, filter_args=[], fast=False):
+    def is_in_filter(self, *args, **kwargs):
         """ Utility function for checking whever the rhombohedron is in rendering distance
         `fast` just checks the first vertex and exits, otherwise if any of the vertices are inside the filter
         then the whole cell is inside filter
         """
-        if fast:
-            return filter(self.verts[0], filter_centre, *filter_args)
+        def run_filter(filter, filter_centre, filter_args=[], filter_indices=False, fast=False, invert_filter=False):
+            if fast:
+                if filter_indices:
+                    return filter(self.indices[0], np.zeros_like(self.indices), *filter_args)
+                else:
+                    return filter(self.verts[0], filter_centre, *filter_args)
+            else:
+                if filter_indices:
+                    zero_centre = np.zeros_like(self.indices)
+                    for i in self.indices:
+                        if filter(i, zero_centre, *filter_args):
+                            return True
+                    return False
+                else:
+                    for v in self.verts:
+                        if filter(v, filter_centre, *filter_args):
+                            return True
+                    return False
+        
+        result = run_filter(*args, **kwargs)
+        if kwargs["invert_filter"]:
+            return not result
         else:
-            for v in self.verts:
-                if filter(v, filter_centre, *filter_args):
-                    return True
-
-            return False
+            return result
     
 @classmethod
 def get_edges_from_indices(indices):

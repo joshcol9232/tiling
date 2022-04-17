@@ -33,7 +33,13 @@ cells = dg.dualgrid_method(basis, k_range=k_range)
 print("Cells found.\nFiltering & generating graph...")
 # Filter the output cells by some function. Pre-defined ones are: is_point_within_cube, is_point_within_radius.
 # Then outputs a networkx graph with real space positions and indices of each node embedded.
-G, cells = dg.utils.filtered_graph_from_cells(cells, filter=dg.utils.is_point_within_radius, filter_args=[filt_dist])
+
+# Filter out a radius
+G, cells = dg.utils.filtered_graph_from_cells(cells, filter=dg.utils.is_point_within_radius, filter_args=[filt_dist], invert_filter=False)
+
+# To filter by highest index allowed (not advisable for 3D):
+# G, cells = dg.utils.filtered_graph_from_cells(cells, filter=dg.utils.elements_are_below, filter_args=[filt_dist], filter_indices=True, invert_filter=False)
+
 # Filtering is important so that outliers are not included in the graph.
 # e.g tiles that are not connected to the rest of the tiling 
 #       - generate a 2D penrose without a filter and zoom out to see for yourself.
