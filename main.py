@@ -4,12 +4,16 @@ import networkx as nx
 import numpy as np
 
 # Make a Basis object. There are some presets available in the `utils`.
-basis = dg.utils.surface_with_n_rotsym(11, centred=True, sum_zero=True)   # 2D structure with 11-fold rotational symmetry
+basis = dg.utils.surface_with_n_rotsym(5, centred=True, sum_zero=True)   # 2D structure with 11-fold rotational symmetry
 # basis = dg.utils.penrose_basis()          # Penrose tiling.
 # basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
 # basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
 
 print("OFFSETS:", basis.offsets)
+
+possible_cells = basis.get_possible_cells(4)
+print("POSSIBLE CELLS:", possible_cells)
+print("Number of possible cells:", len(possible_cells))
 
 # Set the filtering distance. In this example we will take a sphere out of the centre of the
 # generated structure.

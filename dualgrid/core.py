@@ -93,24 +93,24 @@ class Basis:
 
         return out
 
-    # def get_possible_cells(self, decimals):
-    #     """ Function that finds all possible cell shapes in the final mesh.
-    #         Number of decimal places required for finite hash keys (floats are hard to == )
-    #         Returns a dictionary of volume : [all possible combinations of basis vector to get that volume]
-    #     """
-    #     shapes = {}  # volume : set indices
+    def get_possible_cells(self, decimals):
+        """ Function that finds all possible cell shapes in the final mesh.
+            Number of decimal places required for finite hash keys (floats are hard to == )
+            Returns a dictionary of volume : [all possible combinations of basis vector to get that volume]
+        """
+        shapes = {}  # volume : set indices
 
-    #     for i in range(len(self.vecs-2)):  # Compare each vector set
-    #         for j in range(i+1, len(self.vecs)-1):
-    #             for k in range(j+1, len(self.vecs)):
-    #                 vol = abs(_triple_product(self.vecs[i], self.vecs[j], self.vecs[k]))
-    #                 vol = np.around(vol, decimals=decimals)
-    #                 if vol not in shapes.keys():
-    #                     shapes[vol] = []
+        for inds in itertools.combinations(range(len(self.vecs)), self.dimensions):
+            vol = abs(np.linalg.det(np.matrix([self.vecs[j] for j in inds]))) # Determinant ~ volume
 
-    #                 shapes[vol].append([i, j, k])
+            if vol != 0:
+                vol = np.around(vol, decimals=decimals)
+                if vol not in shapes.keys():
+                    shapes[vol] = [inds]
+                else:
+                    shapes[vol].append(inds)
 
-    #     return shapes
+        return shapes
 
 """ MAIN ALGORITHM """
 class Cell:
