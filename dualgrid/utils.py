@@ -130,7 +130,7 @@ def get_centre_of_interest(cells):
 
 """ Graph
 """
-def filtered_graph_from_cells(cells, filter=None, filter_args=[], filter_centre=None, fast_filter=False):
+def filtered_graph_from_cells(cells, filter=None, filter_args=[], filter_centre=None, fast_filter=False, filter_indices=False):
     """ 
     Returns a networkx graph given a list of cells,
     along with the filtered list of cells.
@@ -151,7 +151,7 @@ def filtered_graph_from_cells(cells, filter=None, filter_args=[], filter_centre=
 
     cells = np.array(cells)
     if filter:
-        filter_results = [c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter) for c in cells]
+        filter_results = [c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter, filter_indices=filter_indices) for c in cells]
         cells = cells[filter_results]  # filter the cells out
 
     for cell_index, c in enumerate(cells):
