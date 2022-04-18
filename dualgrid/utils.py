@@ -339,7 +339,11 @@ def _render_cells_solid_2D(
             poly_dict[size_ratio].append(p)
 
     # Render
-    clrmap = cm.get_cmap(colourmap_str)
+    if colourmap_str == "":
+        clrmap = lambda s: "w"
+    else:
+        clrmap = cm.get_cmap(colourmap_str)
+
     for size_ratio, polygons in poly_dict.items():
         colour = clrmap(size_ratio)
         shape_coll = PatchCollection(polygons, edgecolor=edge_colour, facecolor=colour, linewidth=edge_thickness, antialiased=True)

@@ -62,7 +62,8 @@ else:
 # Render the graph using matplotlib. Support for 2D and 3D crystals, 4D and above gets truncated.
 # i.e, First 3 elements of vectors are plotted.
 if basis.dimensions == 2:   # Fill 2D tiling with colour purely for aesthetics.
-    dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=0.0, axis_size=10, centre_of_interest=np.zeros(2))
+    # dg.utils.render_cells_solid(cells, ax, scale=1.0, edge_thickness=1.0, axis_size=10, centre_of_interest=np.zeros(2), colourmap_str="")
+    dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=1.0, axis_size=10, centre_of_interest=np.zeros(2))
 
     # dg.utils.graph_from_cells(cells) # Uncomment to see graph render.
     # dg.utils.render_graph_wire(G, ax)
