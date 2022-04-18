@@ -5,11 +5,10 @@ def _get_k_combos(k_range, dimensions):
     return np.array(list(itertools.product(*[ [k for k in range(1-k_range, k_range)] for _d in range(dimensions) ])))
 
 class ConstructionSet:
-    def __init__(self, normal, offset, setnum, k_range):
+    def __init__(self, normal, offset, setnum):
         self.normal = normal
         self.offset = offset
         self.setnum = setnum
-        self.k_range = k_range
 
     def get_intersections_with(self, k_range, others):
         """
@@ -123,12 +122,12 @@ class Cell:
     def __repr__(self):
         return "Cell(%s parents %s)" % (self.indices[0], self.parent_sets)
 
-    def is_in_filter(self, filter, filter_centre, filter_args=[], filter_indices=False, fast=False, invert_filter=False):
+    def is_in_filter(self, *args, **kwargs):
         """ Utility function for checking whever the rhombohedron is in rendering distance
         `fast` just checks the first vertex and exits, otherwise if any of the vertices are inside the filter
         then the whole cell is inside filter
         """
-        def run_filter():
+        def run_filter(filter, filter_centre, filter_args=[], filter_indices=False, fast=False, invert_filter=False):
             if fast:
                 if filter_indices:
                     return filter(self.indices[0], np.zeros_like(self.indices), *filter_args)
@@ -136,9 +135,9 @@ class Cell:
                     return filter(self.verts[0], filter_centre, *filter_args)
             else:
                 if filter_indices:
-                    filter_centre = np.zeros_like(self.indices)
+                    zero_centre = np.zeros_like(self.indices)
                     for i in self.indices:
-                        if filter(i, filter_centre, *filter_args):
+                        if filter(i, zero_centre, *filter_args):
                             return True
                     return False
                 else:
@@ -147,8 +146,8 @@ class Cell:
                             return True
                     return False
         
-        result = run_filter()
-        if invert_filter:
+        result = run_filter(*args, **kwargs)
+        if kwargs["invert_filter"]:
             return not result
         else:
             return result
@@ -192,7 +191,7 @@ def _get_cells_from_construction_sets(construction_sets, js, cells, k_range, bas
 
 
 
-def dualgrid_method(basis, k_range=3, shape_accuracy=4):
+def dualgrid_method(basis, k_range, shape_accuracy=4):
     """
     de Bruijn dual grid method.
     Generates and returns cells from basis given in the range given.
@@ -202,7 +201,7 @@ def dualgrid_method(basis, k_range=3, shape_accuracy=4):
     # possible_cells = basis.get_possible_cells(shape_accuracy)
 
     # Get each set of parallel planes
-    construction_sets = [ ConstructionSet(e, basis.offsets[i], i, k_range) for (i, e) in enumerate(basis.vecs) ]
+    construction_sets = [ ConstructionSet(e, basis.offsets[i], i) for (i, e) in enumerate(basis.vecs) ]
 
     cells = []
     # Find intersections between each of the plane sets

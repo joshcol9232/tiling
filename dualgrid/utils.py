@@ -79,12 +79,13 @@ def surface_with_n_rotsym(n, random_offsets=True, **kwargs):
     """
     Basis for generating a 2D structure with `n` rotational symmetry.
     """
-    N = n    # Save N for finding the angles
+    N = n
     if n % 2 == 0:
-        n //= 2   # To stop identical basis sets being created for even symmetries
+        n //= 2
 
     vecs = np.array([[np.cos(j * np.pi * 2.0/N), np.sin(j * np.pi * 2.0/N)] for j in range(n)])
-    offsets = generate_offsets(N, random_offsets, **kwargs)[:n]
+
+    offsets = generate_offsets(n, random_offsets, **kwargs)
 
     return dg.Basis(vecs, offsets)
 
@@ -146,20 +147,14 @@ def get_centre_of_interest(cells):
 
     return np.mean(all_verts, axis=0)  # centre of interest is mean of all the vertices
 
-""" Graph
+""" Graph & filtering
 """
-def filtered_graph_from_cells(cells, filter=None, filter_args=[], filter_centre=None, fast_filter=False, filter_indices=False, invert_filter=False):
-    """ 
-    Returns a networkx graph given a list of cells,
-    along with the filtered list of cells.
+
+def filter_cells(cells, filter, filter_args=[], filter_centre=None, fast_filter=False, filter_indices=False, invert_filter=False):
+    """
     The position and indices of the vertex is embedded in each node.
     Takes a function to filter out points with, along with it's arguments.
     """
-    unique_indices = []  # Edges will be when distance between indices is 1
-    vert_arr_indices = []
-    cell_vertices = [] # Cell vertices (array index form).
-                       # [ [cell_0_vertices,], ... , [cell_N_vertices,]  ]
-    G = nx.Graph()
 
     if type(filter_centre) == type(None):
         print("FINDING COI")
@@ -168,9 +163,20 @@ def filtered_graph_from_cells(cells, filter=None, filter_args=[], filter_centre=
         print("COI:", filter_centre)
 
     cells = np.array(cells)
-    if filter:
-        filter_results = [c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter, filter_indices=filter_indices, invert_filter=invert_filter) for c in cells]
-        cells = cells[filter_results]  # filter the cells out
+    filter_results = [c.is_in_filter(filter, filter_centre, filter_args, fast=fast_filter, filter_indices=filter_indices, invert_filter=invert_filter) for c in cells]
+
+    return cells[filter_results]
+
+def graph_from_cells(cells):
+    """ 
+    Returns a networkx graph given a list of cells.
+    """
+    G = nx.Graph()
+
+    unique_indices = []  # Edges will be when distance between indices is 1
+    vert_arr_indices = []
+    cell_vertices = [] # Cell vertices (array index form).
+                       # [ [cell_0_vertices,], ... , [cell_N_vertices,]  ]
 
     for cell_index, c in enumerate(cells):
         for arr_index, i in enumerate(c.indices):
@@ -192,7 +198,7 @@ def filtered_graph_from_cells(cells, filter=None, filter_args=[], filter_centre=
                 # linked
                 G.add_edge(vert_arr_indices[i], vert_arr_indices[j])
 
-    return G, cells
+    return G
 
 
 """ RENDERING
