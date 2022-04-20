@@ -134,6 +134,8 @@ def elements_are_below(r, filter_centre, value):
 
     return True
 
+def has_index_of_x_in_set_y(r, _filter_centre, x, y):
+    return r[y] == x
 
 
 def get_centre_of_interest(cells):

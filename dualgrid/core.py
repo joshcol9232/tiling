@@ -114,10 +114,11 @@ class Basis:
 
 """ MAIN ALGORITHM """
 class Cell:
-    def __init__(self, vertices, indices, parent_sets):
+    def __init__(self, vertices, indices, parent_sets, intersection):
         self.verts = vertices
         self.indices = indices
         self.parent_sets = parent_sets
+        self.intersection = intersection
 
     def __repr__(self):
         return "Cell(%s parents %s)" % (self.indices[0], self.parent_sets)
@@ -186,10 +187,8 @@ def _get_cells_from_construction_sets(construction_sets, js, cells, k_range, bas
             vertices_set.append(vertex)
 
         vertices_set = np.array(vertices_set)
-        c = Cell(vertices_set, indices_set, js)
+        c = Cell(vertices_set, indices_set, js, intersection)
         cells.append(c)
-
-
 
 def dualgrid_method(basis, k_range, shape_accuracy=4):
     """

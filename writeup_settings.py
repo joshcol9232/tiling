@@ -45,7 +45,7 @@ print("Cells found.\nFiltering & generating graph...")
 #G = dg.utils.graph_from_cells(cells)
 
 # To filter by highest index allowed (not advisable for 3D):
-cells = dg.utils.filter_cells(cells, filter=dg.utils.has_index_of_x_in_set_y, filter_args=[1, 0], filter_indices=True, invert_filter=False, fast_filter=True)
+cells = dg.utils.filter_cells(cells, filter=dg.utils.elements_are_below, filter_args=[filt_dist], filter_indices=True, invert_filter=False)
 
 # Filtering is important so that outliers are not included in the graph.
 # e.g tiles that are not connected to the rest of the tiling 
