@@ -25,7 +25,13 @@ def render_construction(ax, k_range, x_range):
     for i, vec in enumerate(basis.vecs):
         for k in range(1-k_range, k_range):
             y = (basis.offsets[i] + k - (vec[0] * x))/vec[1]
-            ax.plot(x, y)
+
+            # Check if line is vertical
+            if float("inf") in y or float("-inf") in y:
+                print("VERTICAL LINE AT:", basis.offsets[i] + k)
+                ax.axvline(x=basis.offsets[i] + k)
+            else:
+                ax.plot(x, y)
 
 fig, ax = plt.subplots(1, figsize=(10, 10))
 ax.axis("equal")
@@ -44,7 +50,6 @@ def render_cells_at_intersections(
     edge_thickness=1.0,
     edge_colour="k",
     scale=0.2,
-    centre_of_interest=None,
     axis_size=5.0,
 ):
     def make_polygon(cell_verts, scale, intersection):
@@ -85,19 +90,15 @@ def render_cells_at_intersections(
         shape_coll = PatchCollection(polygons, edgecolor=edge_colour, facecolor=colour, linewidth=edge_thickness, antialiased=True)
         ax.add_collection(shape_coll)
 
-    if type(centre_of_interest) == type(None):
-        # Find coi
-        centre_of_interest = dg.utils.get_centre_of_interest(cells)
 
-    plt.xlim(centre_of_interest[0] - axis_size, centre_of_interest[0] + axis_size)
-    plt.ylim(centre_of_interest[1] - axis_size, centre_of_interest[1] + axis_size)
+    plt.xlim(-axis_size, axis_size)
+    plt.ylim(-axis_size, axis_size)
     plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
 
 
-render_cells_at_intersections(cells, ax, scale=0.1)
+render_cells_at_intersections(cells, ax, scale=0.1, axis_size=2)
 
 ax.set_axis_off()
-ax.autoscale(enable=True)
 # plt.savefig("%d-fold_kmax_%d.pdf" % (R, filt_dist), bbox_inches="tight", transparent=True, pad_inches=0)
 plt.show()
 
