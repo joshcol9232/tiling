@@ -58,7 +58,6 @@ if basis.dimensions == 2:
 else:
     ax = plt.axes(projection="3d")
 
-G = None
 # Render the graph using matplotlib. Support for 2D and 3D crystals, 4D and above gets truncated.
 # i.e, First 3 elements of vectors are plotted.
 if basis.dimensions == 2:   # Fill 2D tiling with colour purely for aesthetics.

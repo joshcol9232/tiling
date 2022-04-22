@@ -218,6 +218,78 @@ def render_graph_wire(G, *args, **kwargs):
     else:
         _render_3D_wire(G, *args, **kwargs)
 
+def render_2D_construction(ax, basis, k_range, x_range):
+    cols = ["r", "g", "b", "y", "m", "c", "k"]
+    x = np.linspace(-x_range - 0.5, x_range + 0.5)
+
+    for i, vec in enumerate(basis.vecs):
+        for k in range(1-k_range, k_range):
+            y = (basis.offsets[i] + k - (vec[0] * x))/vec[1]
+
+            # Check if line is vertical
+            if float("inf") in y or float("-inf") in y:
+                print("VERTICAL LINE AT:", basis.offsets[i] + k)
+                ax.axvline(x=basis.offsets[i] + k, color=cols[i%len(cols)])
+            else:
+                ax.plot(x, y, color=cols[i%len(cols)])
+    
+    plt.xlim(-x_range, x_range)
+    plt.ylim(-x_range, x_range)
+
+def render_2D_cells_at_intersections(
+    ax,
+    cells,
+    colourmap_str="viridis",
+    opacity=1.0,
+    edge_thickness=1.0,
+    edge_colour="k",
+    scale=0.1,
+    axis_size=5.0,
+):
+    def make_polygon(cell_verts, scale, intersection):
+         # copy to new array in draw-order
+        verts = np.array([cell_verts[0], cell_verts[1], cell_verts[3], cell_verts[2]])
+        if scale < 1.0:
+            for v in verts:
+                v -= (v - intersection) * (1.0 - scale)
+        
+        return Polygon(verts)
+
+    # Group by smallest internal angle. This will serve as the colour index
+    INDEX_DECIMALS = 4  # Significant figures used in grouping cells together
+    poly_dict = {} # Dictionary of {size index: [matplotlib polygon]}
+
+
+    for cell_index, c in enumerate(cells):
+        # CENTRE CELLS ON INTERSECTION
+        middle = np.mean(c.verts, axis=0)
+        diff = c.intersection - middle
+        c.verts += diff
+
+        size_ratio = np.around(abs(np.dot(c.verts[0] - c.verts[1], c.verts[0] - c.verts[2])), decimals=4)
+        p = make_polygon(c.verts, scale, c.intersection)
+        if size_ratio not in poly_dict:
+            poly_dict[size_ratio] = [p]
+        else:
+            poly_dict[size_ratio].append(p)
+
+    # Render
+    if colourmap_str == "":
+        clrmap = lambda s: "w"
+    else:
+        clrmap = cm.get_cmap(colourmap_str)
+
+    for size_ratio, polygons in poly_dict.items():
+        colour = clrmap(size_ratio)
+        shape_coll = PatchCollection(polygons, edgecolor=edge_colour, facecolor=colour, linewidth=edge_thickness, antialiased=True)
+        ax.add_collection(shape_coll)
+
+
+    plt.xlim(-axis_size, axis_size)
+    plt.ylim(-axis_size, axis_size)
+    plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
+
+
 def _render_2D_wire(
     G,
     ax,
