@@ -8,17 +8,15 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 
-import sys
+import os
+from multiprocessing import Pipe, Process
 
-R = int(sys.argv[1])
-k_range = int(sys.argv[2])
-# Make a Basis object. There are some presets available in the `utils`.
-basis = dg.utils.surface_with_n_rotsym(R, centred=True)   # 2D structure with 11-fold rotational symmetry
-# basis = dg.utils.penrose_basis()          # Penrose tiling.
-# basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
-# basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
+DIMS = (1550, 1582)
 
-print("OFFSETS:", basis.offsets)
+def stitch_video(fps):
+    cmd = "cd frames && ffmpeg -r %d -y -loglevel 24 -s %dx%d -i frame%%d.png -pix_fmt yuv420p output.mp4" % (fps, DIMS[0], DIMS[1])
+    print("Stitching video...")
+    os.system(cmd)
 
 def render_construction(ax, basis, k_range, x_range):
     cols = ["r", "g", "b", "y", "m", "c", "k"]
@@ -30,7 +28,6 @@ def render_construction(ax, basis, k_range, x_range):
 
             # Check if line is vertical
             if float("inf") in y or float("-inf") in y:
-                print("VERTICAL LINE AT:", basis.offsets[i] + k)
                 ax.axvline(x=basis.offsets[i] + k, color=cols[i%len(cols)])
             else:
                 ax.plot(x, y, color=cols[i%len(cols)])
@@ -90,31 +87,55 @@ def render_cells_at_intersections(
     plt.ylim(-axis_size, axis_size)
     plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
 
+def run(da, i):
+    a = 0.0
+
+    vecs = []
+    while a < np.pi * 2.0: # Go around full circle
+        vecs.append(np.array([np.cos(a), np.sin(a)]))
+        a += da
+
+    vecs = np.array(vecs)
+    basis = dg.Basis(vecs, dg.utils.generate_offsets(len(vecs), False, centred=True))
+
+    k_range = 2
+    axis_size = 2
+
+    fig, ax = plt.subplots(1, figsize=(10, 10))
+    ax.axis("equal")
+    render_construction(ax, basis, k_range, axis_size)
+
+    cells = dg.dualgrid_method(basis, k_range)
+    render_cells_at_intersections(cells, ax, scale=0.06, axis_size=axis_size)
+
+    """
+    scale = 2.0
+    x_origin = -axis_size + scale + 1.0
+    y_origin = -axis_size + scale + 1.0
+    plt.quiver([x_origin for _i in range(len(vecs))], [y_origin for _i in range(len(vecs))], vecs[:,0] * scale, vecs[:,1] * scale, width=0.003, scale_units="inches")  # Plot unit vectors
+    """
+
+    ax.set_axis_off()
+    plt.title("Angle between vecs: %.4f. n: %d." % (da, len(vecs)))
+    plt.savefig("frames/frame%d.png" % i, dpi=200, bbox_inches='tight', transparent=False, pad_inches=0)
+
+def generate(smallest_division, num, cpu_cores):
+    a_list = np.linspace(np.pi + 0.01, np.pi/smallest_division, num=num)
+    print("Total angles:\t", len(a_list))
 
 
-fig, ax = plt.subplots(1, figsize=(10, 10))
-ax.axis("equal")
-ax_size = 2
+    for i in range(0, len(a_list), cpu_cores):
+        processes = []
+        for j, da in enumerate(a_list[i:i + cpu_cores]):
+            p = Process(target=run, args=(da, i+j))
+            p.start()
+            processes.append(p)
 
+        for k, p in enumerate(processes):
+            p.join()
+            print("Frame done:", k + i)
 
-cells = dg.dualgrid_method(basis, k_range)
-print("Cells found.")
-render_construction(ax, basis, k_range, ax_size)
-
-render_cells_at_intersections(cells, ax, scale=0.1, axis_size=2)
-
-
-
-ax.set_axis_off()
-plt.xlim(-ax_size, ax_size)
-plt.ylim(-ax_size, ax_size)
-filename = "%d-fold_kmax_%d_construction.pdf" % (R, k_range)
-print("SAVING AS: %s" % filename)
-plt.savefig(filename, dpi=400, bbox_inches="tight", transparent=True, pad_inches=0)
-# plt.show()
-
-# Built-in plotting functions in networkx can be used to view the graph form in 2D.
-# See networkx's documentation for more. A simple example is below.
-
-# nx.draw_circular(G)
-# plt.show()
+FPS = 30
+NUM = FPS * 10
+generate(7, NUM, 4)
+stitch_video(FPS)
