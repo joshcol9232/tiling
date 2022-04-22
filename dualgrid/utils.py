@@ -228,7 +228,6 @@ def render_2D_construction(ax, basis, k_range, x_range):
 
             # Check if line is vertical
             if float("inf") in y or float("-inf") in y:
-                print("VERTICAL LINE AT:", basis.offsets[i] + k)
                 ax.axvline(x=basis.offsets[i] + k, color=cols[i%len(cols)])
             else:
                 ax.plot(x, y, color=cols[i%len(cols)])
