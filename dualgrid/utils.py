@@ -90,7 +90,7 @@ def surface_with_n_rotsym(n, random_offsets=True, **kwargs):
     return dg.Basis(vecs, offsets)
 
 def penrose_basis(random_offsets=True, **kwargs):
-    return surface_with_n_rotsym(5, sum_to_zero=True, below_one=True, random_offsets=random_offsets, **kwargs)
+    return surface_with_n_rotsym(5, sum_zero=True, below_one=True, random_offsets=random_offsets, **kwargs)
 
 def hexagonal_basis(random_offsets=True, **kwargs):
     return dg.Basis(np.array([
