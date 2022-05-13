@@ -1,7 +1,7 @@
 # tiling
 Tool for generating arbitrary rhombic tilings in arbitrary numbers of dimensions, based on the de Bruijn grid method.
 
-WORK IN PROGRESS: Breaking changes may be made in the early stages.
+WORK IN PROGRESS
 
 - 11-Fold rotationally symmetric tiling.
 ![11-Fold](11-fold_output.png?raw=true "11-Fold rotationally symmetric tiling.")
