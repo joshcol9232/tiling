@@ -12,6 +12,6 @@ print("Generated graph.")
 
 # Generate & save a mesh.
 print("Generating mesh...")
-mesh = dg.utils.generate_wire_mesh(G, verbose=True)
+mesh = dg.utils.generate_wire_mesh_stl(G, verbose=True)
 print("Saving mesh...")
 mesh.write("G.stl")

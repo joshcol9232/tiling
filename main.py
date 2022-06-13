@@ -5,11 +5,12 @@ import numpy as np
 
 # Make a Basis object. There are some presets available in the `utils`.
 # basis = dg.utils.surface_with_n_rotsym(11, centred=True)   # 2D structure with 11-fold rotational symmetry
-basis = dg.utils.penrose_basis()          # Section of Penrose tiling.
-#basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
+# basis = dg.utils.penrose_basis()          # Section of Penrose tiling.
+basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
 # basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
 
 print("OFFSETS:", basis.offsets)
+G = None
 
 # Set the k range, i.e the number of construction planes used in generating the vertices.
 # In 2D this corresponds to having line sets with lines of index -1, 0, 1 for a k range of 2 for example.
@@ -83,6 +84,23 @@ plt.show()
 # See networkx's documentation for more. A simple example is below.
 
 # if type(G) == type(None):
-#    G = dg.utils.graph_from_cells(cells)
+#     print("Generating graph.")
+#     G = dg.utils.graph_from_cells(cells)
 # nx.draw_circular(G)
 # plt.show()
+
+# Example of generating wireframe:
+if type(G) == type(None):
+    print("Generating graph.")
+    G = dg.utils.graph_from_cells(cells)
+
+# Generate the wireframe:
+wireframe = dg.utils.generate_wires(G)
+# print(wireframe)
+
+# Example of generating an STL wireframe mesh. NOTE: This can take a long time, depending on node count etc.
+# Recommended to use a low k_range value (defined above).
+"""
+mesh = dg.utils.generate_wire_mesh_stl(G, verbose=True)
+mesh.write("G.stl")
+"""

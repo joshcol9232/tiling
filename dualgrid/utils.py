@@ -510,7 +510,24 @@ def render_cells_solid(cells, *args, **kwargs):
 
 """ STL Output
 """
-def generate_wire_mesh(
+def generate_wires(G):
+    """
+    Produces list of wires to form a wireframe. Wires are not ordered.
+    Returns [[wire_1 start, wire_1 end], [wire_2 start, wire_2 end], ... [wire_N start, wire_N end]].
+    """
+    wires = np.zeros((len(G.edges), 2, 3)) # Output array
+
+    for i, edge in enumerate(G.edges):
+        vs = [G.nodes[e]["position"] for e in edge]
+        if len(vs[0]) == 2:  # if 2D, append a 0
+            vs = np.array([[vs[0][0], vs[0][1], 0.0], [vs[1][0], vs[1][1], 0.0]])
+
+        wires[i] = np.array([v[:3] for v in vs]) # Truncate to 3D
+
+    return wires
+
+
+def generate_wire_mesh_stl(
     G,
     wire_radius=0.1,
     vertex_radius=None,
@@ -522,7 +539,8 @@ def generate_wire_mesh(
     verts = vertex_positions_from_graph(G)
 
     # If 2D, add a z coordinate of 0
-    if len(verts[0]) == 2:
+    is_2D = len(verts[0]) == 2
+    if is_2D:
         new_verts = []
         for v in verts:
             new_verts.append([v[0], v[1], 0.0])
@@ -535,6 +553,7 @@ def generate_wire_mesh(
 
     print("CELL COUNT:", len(verts)//8)
 
+    
     with pygmsh.occ.Geometry() as geom:       # Use CAD-like commands
         geom.characteristic_length_max = mesh_max_length
         geom.characteristic_length_min = mesh_min_length
@@ -545,13 +564,15 @@ def generate_wire_mesh(
         for edge in G.edges:
             vs = np.array([G.nodes[e]["position"][:3] for e in edge]) # Truncate to 3D
             # If 2D, add a z coordinate of 0
-            if len(vs[0]) == 2:
+            if is_2D:
                 new_verts = []
                 for v in vs:
                     new_verts.append([v[0], v[1], 0.0])
                 vs = np.array(new_verts)
 
-            geom.add_cylinder(vs[0], vs[1] - vs[0], wire_radius)
+        wires = generate_wires(G)
+        for wire in wires:
+            geom.add_cylinder(wire[0], wire[1] - wire[0], wire_radius)
 
         mesh = geom.generate_mesh(**kwargs)
 
@@ -559,6 +580,8 @@ def generate_wire_mesh(
     print("CELL COUNT:", len(verts)//8)
 
     return mesh
+
+
 
 """
 def generate_wire_mesh(
