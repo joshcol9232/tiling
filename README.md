@@ -1,6 +1,8 @@
 # tiling
 Tool for generating arbitrary rhombic tilings in arbitrary numbers of dimensions, based on the de Bruijn grid method.
 
+Please see `final_report.pdf` for a complete overview of the method implemented in the code if you are interested.
+
 If you find any issues/want to request a feature, please don't hesitate to contact me here: joshcol9232@gmail.com.
 
 - 11-Fold rotationally symmetric tiling.
@@ -16,7 +18,7 @@ The `dualgrid` module contains the method itself, which will return a list of rh
 methods in the `utils` module that enable you to render the shapes, save them to an STL file, and choose
 pre-defined bases. See `main.py` to get started, or the other examples in the folder.
 
-Ensure that `main.py` (or your Python file) is being executed from within `tiling-main/` (or the folder containing the `dualgrid` folder), as the Python interpreter needs to be able to find the `dualgrid` module.
+Note: Ensure that `main.py` (or your Python file) is being executed from within `tiling-main/` (or the folder containing the `dualgrid` folder), as the Python interpreter needs to be able to find the `dualgrid` module.
 
 ## Dependencies:
 
