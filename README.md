@@ -27,6 +27,15 @@ Note: Ensure that `main.py` (or your Python file) is being executed from within 
 - `networkx`
 - `pygmsh`
 
+## Collaboration, making changes:
+
+Please raise an issue if a bug is found, or if a potential new feature should be discussed.
+For making changes to the code, please open a separate branch, following the git flow pattern:
+
+i.e Make a new branch for a new feature: `feature/new_feature`, a bug: `bugfix/name_of_bug`, etc.
+
+Then please open a pull request for review.
+
 ## Notes:
 
 - Filtering the generated nodes into a smaller region is important so that outliers are not included in the graph. E.g tiles that are not connected to the rest of the tiling - generate a 2D Penrose tiling without applying a filter and zoom out if you want to see for yourself. This is one minor caveat of the de Bruijn dualgrid method, but it is easily remedied by filtering.
