@@ -5,8 +5,8 @@ import numpy as np
 
 # Make a Basis object. There are some presets available in the `utils`.
 # basis = dg.utils.surface_with_n_rotsym(11, centred=True)   # 2D structure with 11-fold rotational symmetry
-# basis = dg.utils.penrose_basis()          # Section of Penrose tiling.
-basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
+basis = dg.utils.penrose_basis()          # Section of Penrose tiling.
+# basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
 # basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
 
 print("OFFSETS:", basis.offsets)
@@ -16,9 +16,9 @@ G = None
 # In 2D this corresponds to having line sets with lines of index -1, 0, 1 for a k range of 2 for example.
 # Higher k_range -> more vertices generated.
 # The results will later be filtered to remove outliers.
-k_range = 11
+k_range = 1
 
-# NOTE: It is advised to use a smaller k_range for 3D+ structures as 
+# NOTE: It is advised to use a smaller k_range for 3D+ structures as
 # matplotlib starts to struggle with large numbers of shapes. I have
 # done an if statement here to change it for 3D+.
 if basis.dimensions > 2:
@@ -34,7 +34,7 @@ print("Cells found.\nFiltering...")
 
 # To filter by highest index allowed (good for 2D, odd N-fold tilings):
 # cells = dg.utils.filter_cells(cells, filter=dg.utils.elements_are_below, filter_args=[max(k_range-1, 0)], filter_indices=True, invert_filter=False)
-    
+
 # To filter out a radius of R:
 R = 11
 if basis.dimensions != 2:
@@ -48,7 +48,7 @@ print("Cells filtered.")
 #G = dg.utils.graph_from_cells(cells)
 
 # Filtering is important so that outliers are not included in the graph.
-# e.g tiles that are not connected to the rest of the tiling 
+# e.g tiles that are not connected to the rest of the tiling
 #       - generate a 2D penrose without a filter and zoom out to see for yourself.
 # This is one minor caveat of the de Bruijn dualgrid method. Easily remedied by filtering.
 
@@ -63,6 +63,7 @@ else:
 # i.e, First 3 elements of vectors are plotted.
 if basis.dimensions == 2:   # Fill 2D tiling with colour purely for aesthetics.
     dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=0.0)
+    print(cells)
 
     # dg.utils.graph_from_cells(cells) # Uncomment to see graph render.
     # dg.utils.render_graph_wire(G, ax)
