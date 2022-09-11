@@ -596,7 +596,6 @@ def generate_wire_mesh_stl(
     return mesh
 """
 
-
 """
 def generate_wire_mesh(
         cell_dict,

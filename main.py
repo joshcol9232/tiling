@@ -16,7 +16,7 @@ G = None
 # In 2D this corresponds to having line sets with lines of index -1, 0, 1 for a k range of 2 for example.
 # Higher k_range -> more vertices generated.
 # The results will later be filtered to remove outliers.
-k_range = 2
+k_range = 11
 
 # NOTE: It is advised to use a smaller k_range for 3D+ structures as
 # matplotlib starts to struggle with large numbers of shapes. I have
@@ -100,11 +100,10 @@ wireframe = dg.utils.generate_wires(G)
 
 # Example of generating an STL wireframe mesh. NOTE: This can take a while with large node counts.
 # Recommended to use a low k_range value (defined above) at first.
-"""
+
 print("SAVING TO STL: graph_out.stl ...")
 if type(G) == type(None): # Make graph if it doesn't already exist
     G = dg.utils.graph_from_cells(cells)
 # Specify path, and rod radius
 dg.utils.export_graph_to_stl(G, "graph_out.stl", 0.1)
 print("DONE :)")
-"""

@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.spatial.transform import Rotation as Rot
 
 class Shape:  # Group of triangles to be transformed. Fixed
     def __init__(self):
