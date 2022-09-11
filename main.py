@@ -17,7 +17,7 @@ G = None
 # In 2D this corresponds to having line sets with lines of index -1, 0, 1 for a k range of 2 for example.
 # Higher k_range -> more vertices generated.
 # The results will later be filtered to remove outliers.
-k_range = 1
+k_range = 2
 
 # NOTE: It is advised to use a smaller k_range for 3D+ structures as
 # matplotlib starts to struggle with large numbers of shapes. I have
@@ -63,17 +63,19 @@ else:
 # Render the graph using matplotlib. Support for 2D and 3D crystals, 4D and above gets truncated.
 # i.e, First 3 elements of vectors are plotted.
 if basis.dimensions == 2:   # Fill 2D tiling with colour purely for aesthetics.
-    dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=0.0)
-    print(cells)
+    # dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=0.0)
+    # print(cells)
+
+    G = dg.utils.graph_from_cells([cells[0]])
+    print("Nodes:", G.nodes[0], G.adj)
+    dg.utils.save_graph_to_file(G, "graph_out.stl", 0.1)
 
     # dg.utils.graph_from_cells(cells) # Uncomment to see graph render.
-    # dg.utils.render_graph_wire(G, ax)
+    dg.utils.render_graph_wire(G, ax)
     ax.autoscale(enable=True)  # Zoom out to fit whole tiling
     ax.set_axis_off()
 
-    G = dg.utils.graph_from_cells(cells)
-    print("Nodes:", G.nodes[0], G.adj)
-    dg.utils.save_graph_to_file(G, "graph_out.stl", 0.1)
+
 
 elif basis.dimensions == 3:
     dg.utils.render_cells_solid(cells, ax)
