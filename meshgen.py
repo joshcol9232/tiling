@@ -5,6 +5,16 @@ class Shape:  # Group of triangles to be transformed. Fixed
     def __init__(self):
         self.triangles = np.array([])
 
+    def __iadd__(self, rhs):
+        assert len(rhs) == 3
+        for i in range(len(self.triangles)):
+            self.triangles[i] += rhs
+        return self
+
+    def __imul__(self, rhs):
+        self.transform(rhs)
+        return self
+
     def from_triangles(tri):
         s = Shape()
         s.triangles = np.array(tri)
@@ -17,6 +27,7 @@ class Shape:  # Group of triangles to be transformed. Fixed
     def transform(self, matrix):
         for i in range(len(self.triangles)):
             self.triangles[i] = np.dot(matrix, self.triangles[i].T).T
+
 
 def vec_from_angle_xyplane(a):
     return np.array([ np.cos(a), np.sin(a), 0.0 ])
@@ -132,6 +143,11 @@ def new_stl(filepath):
 # c = Shape.from_triangles([verts])
 # c = make_circle(np.array([1.0, 0.0, 0.2]), 1.0, np.array([1.0, 0.0, 1.0]), trinum=128)
 c = make_cylinder(np.zeros(3), np.array([0.0, 0.0, 3.0]), 1.0, circle_seg=8)
+c += np.array([2.0, 2.0, 2.0])
+m = Rot.from_euler("x", np.pi/4.0).as_matrix()
+#c.transform(m)
+c *= m
+
 fo = new_stl("meshgenout.stl")
 c.write(fo)
 fo.close()
