@@ -82,7 +82,7 @@ def make_cylinder(start, end, radius, circle_seg=32):
     # then plug in x and z to get y. This is point on the plane.
     # d = ax0 + by0 + cz0 where x0 etc is centre
     point_on_plane = np.array([1.0, 0.1, 2.11]) # TODO: maybe make random in the future
-    d = np.dot(centre, normal)
+    d = np.dot(start, normal)
 
     if normal[1] != 0:
         point_on_plane[1] = (d - point_on_plane[2] * normal[2] - point_on_plane[0] * normal[0]) / normal[1]
@@ -95,24 +95,29 @@ def make_cylinder(start, end, radius, circle_seg=32):
     v2 = np.cross(v1, normal) # last orthogonal vec
 
     # Fan of triangles for each end
-    da = 2 * np.pi/trinum
+    da = 2 * np.pi/circle_seg
     anext = 0
-    prevstart = circle_eq(v1, v2, centre, radius, anext)
-    prevend = circle_eq(v1, v2, centre, radius, anext)
-    for t in range(trinum-1):
+    prev = circle_eq(v1, v2, start, radius, anext)
+    for t in range(circle_seg):
         anext += da
-        prevtmpstart = circle_eq(v1, v2, start, radius, anext)
-        prevtmpend = circle_eq(v1, v2, end, radius, anext)
-        triangles.append(np.array([centre, prev, prevtmp]))
-        prevstart = prevtmpstart
-        prevend = prevtmpend
+        prevtmp = circle_eq(v1, v2, start, radius, anext) # next segment
+        # Circle ends
+        triangles.append(np.array([start, prev, prevtmp])) # top
+        triangles.append(np.array([end, prev + lengthvec, prevtmp + lengthvec])) # bottom
+        # Side pannels (two to form square)
+        triangles.append(np.array([prev, prevtmp, prevtmp + lengthvec])) # top -> bottom
+        triangles.append(np.array([prevtmp + lengthvec, prev + lengthvec, prev])) # bottom -> top
 
+        prev = prevtmp
+
+    """
+    # Ensures last triangle connects
     triangles.append(np.array([
         centre,
         circle_eq(v1, v2, centre, radius, anext),
-        circle_eq(v1, v2, centre, radius, 0)       # Ensures last triangle connects
+        circle_eq(v1, v2, centre, radius, 0)
     ]))
-
+    """
     return Shape.from_triangles(triangles)
 
 
@@ -125,7 +130,8 @@ def new_stl(filepath):
 # verts = np.array([ [0.5, 0.5, 0], [0, 1.5, 0.1], [1, 1, 0] ])
 # verts = np.array([[0.0, 0.0, 0.0], [0, 1, 0], [0.5, 0.5, 0.0]])
 # c = Shape.from_triangles([verts])
-c = make_circle(np.array([1.0, 0.0, 0.2]), 1.0, np.array([1.0, 0.0, 1.0]), trinum=128)
+# c = make_circle(np.array([1.0, 0.0, 0.2]), 1.0, np.array([1.0, 0.0, 1.0]), trinum=128)
+c = make_cylinder(np.zeros(3), np.array([0.0, 0.0, 3.0]), 1.0, circle_seg=8)
 fo = new_stl("meshgenout.stl")
 c.write(fo)
 fo.close()
