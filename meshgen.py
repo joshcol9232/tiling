@@ -139,11 +139,13 @@ def add_hemisphere_segment(triangles, v1, v2, centre, dir, r0, a0, a1, longitude
         print("DOING PHI:", phi[i])
         # v1, v2, centre, radius, a
         # anticlockwise from bottom corner 0 -> 3 of square tile.
+        r_lower = r0 * cosphi[i]
+        r_higher = r0 * cosphi[i+1]
         vs = [
-            circle_eq(v1 * cosphi[i], v2 * cosphi[i], centre, r0 * cosphi[i], a0) + dir * r0 * sinphi[i],
-            circle_eq(v1 * cosphi[i], v2 * cosphi[i], centre, r0 * cosphi[i], a1) + dir * r0 * sinphi[i],
-            circle_eq(v1 * cosphi[i+1], v2 * cosphi[i+1], centre, r0 * cosphi[i+1], a1) + dir * r0 * sinphi[i+1],
-            circle_eq(v1 * cosphi[i+1], v2 * cosphi[i+1], centre, r0 * cosphi[i+1], a0) + dir * r0 * sinphi[i+1]
+            circle_eq(v1, v2, centre, r_lower, a0) + dir * r0 * sinphi[i],
+            circle_eq(v1, v2, centre, r_lower, a1) + dir * r0 * sinphi[i],
+            circle_eq(v1, v2, centre, r_higher, a1) + dir * r0 * sinphi[i+1],
+            circle_eq(v1, v2, centre, r_higher, a0) + dir * r0 * sinphi[i+1]
         ]
 
         # Make triangles
@@ -152,8 +154,8 @@ def add_hemisphere_segment(triangles, v1, v2, centre, dir, r0, a0, a1, longitude
 
     # final cap triangle
     triangles.append([
-        circle_eq(v1 * cosphi[-1], v2 * cosphi[-1], centre, r0 * cosphi[-1], a0) + dir * r0 * sinphi[-1],
-        circle_eq(v1 * cosphi[-1], v2 * cosphi[-1], centre, r0 * cosphi[-1], a1) + dir * r0 * sinphi[-1],
+        circle_eq(v1, v2, centre, r0 * cosphi[-1], a0) + dir * r0 * sinphi[-1],
+        circle_eq(v1, v2, centre, r0 * cosphi[-1], a1) + dir * r0 * sinphi[-1],
         centre + dir * r0, # Top of sphere
     ])
     print("Cap placed:", triangles[-3:])
@@ -216,7 +218,7 @@ if __name__ == "__main__":
     # c = Shape.from_triangles([verts])
     # c = make_circle(np.array([1.0, 0.0, 0.2]), 1.0, np.array([1.0, 0.0, 1.0]), trinum=128)
     # c = make_cylinder(np.zeros(3), np.array([0.0, 0.0, 3.0]), 1.0, circle_seg=8)
-    c = make_rounded_cylinder(np.zeros(3), np.array([0.0, 0.0, 0.01]), 3.0, circle_seg=32, longitudes=100)
+    c = make_rounded_cylinder(np.zeros(3), np.array([0, 0, 3]), 1.0, circle_seg=32, longitudes=32)
     # c += np.array([2.0, 2.0, 2.0])
     # m = Rot.from_euler("x", np.pi/4.0).as_matrix()
     #c.transform(m)
