@@ -2,6 +2,7 @@ import dualgrid as dg
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+import meshgen
 
 # Make a Basis object. There are some presets available in the `utils`.
 # basis = dg.utils.surface_with_n_rotsym(11, centred=True)   # 2D structure with 11-fold rotational symmetry
@@ -69,6 +70,11 @@ if basis.dimensions == 2:   # Fill 2D tiling with colour purely for aesthetics.
     # dg.utils.render_graph_wire(G, ax)
     ax.autoscale(enable=True)  # Zoom out to fit whole tiling
     ax.set_axis_off()
+
+    G = dg.utils.graph_from_cells(cells)
+    print("Nodes:", G.nodes[0], G.adj)
+    dg.utils.save_graph_to_file(G, "graph_out.stl", 0.1)
+
 elif basis.dimensions == 3:
     dg.utils.render_cells_solid(cells, ax)
     ax.autoscale(enable=True)
@@ -91,12 +97,14 @@ plt.show()
 # plt.show()
 
 # Example of generating wireframe:
+"""
 if type(G) == type(None):
     print("Generating graph.")
     G = dg.utils.graph_from_cells(cells)
 
 # Generate the wireframe:
 wireframe = dg.utils.generate_wires(G)
+"""
 # print(wireframe)
 
 # Example of generating an STL wireframe mesh. NOTE: This can take a long time, depending on node count etc.

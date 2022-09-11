@@ -131,23 +131,22 @@ def make_cylinder(start, end, radius, circle_seg=32):
     """
     return Shape.from_triangles(triangles)
 
-
 def new_stl(filepath):
     fo = open(filepath, "w")
     fo.write("solid \n")
     return fo
 
+if __name__ == "__main__":
+    # verts = np.array([ [0.5, 0.5, 0], [0, 1.5, 0.1], [1, 1, 0] ])
+    # verts = np.array([[0.0, 0.0, 0.0], [0, 1, 0], [0.5, 0.5, 0.0]])
+    # c = Shape.from_triangles([verts])
+    # c = make_circle(np.array([1.0, 0.0, 0.2]), 1.0, np.array([1.0, 0.0, 1.0]), trinum=128)
+    c = make_cylinder(np.zeros(3), np.array([0.0, 0.0, 3.0]), 1.0, circle_seg=8)
+    c += np.array([2.0, 2.0, 2.0])
+    m = Rot.from_euler("x", np.pi/4.0).as_matrix()
+    #c.transform(m)
+    c *= m
 
-# verts = np.array([ [0.5, 0.5, 0], [0, 1.5, 0.1], [1, 1, 0] ])
-# verts = np.array([[0.0, 0.0, 0.0], [0, 1, 0], [0.5, 0.5, 0.0]])
-# c = Shape.from_triangles([verts])
-# c = make_circle(np.array([1.0, 0.0, 0.2]), 1.0, np.array([1.0, 0.0, 1.0]), trinum=128)
-c = make_cylinder(np.zeros(3), np.array([0.0, 0.0, 3.0]), 1.0, circle_seg=8)
-c += np.array([2.0, 2.0, 2.0])
-m = Rot.from_euler("x", np.pi/4.0).as_matrix()
-#c.transform(m)
-c *= m
-
-fo = new_stl("meshgenout.stl")
-c.write(fo)
-fo.close()
+    fo = new_stl("meshgenout.stl")
+    c.write(fo)
+    fo.close()
