@@ -127,7 +127,7 @@ def make_cylinder(start, end, radius, circle_seg=16):
 
     return Shape.from_triangles(triangles)
 
-def add_hemisphere_segment(triangles, v1, v2, centre, dir, r0, a0, a1, longitudes=5): # (without base)
+def add_hemisphere_segment(triangles, v1, v2, centre, dir, r0, a0, a1, longitudes=8): # (without base)
     """
     Edits triangles array by reference
     """
@@ -162,7 +162,7 @@ def add_hemisphere_segment(triangles, v1, v2, centre, dir, r0, a0, a1, longitude
 
 
 
-def make_rounded_cylinder(start, end, radius, circle_seg=16, **kwargs):
+def make_rounded_cylinder(start, end, radius, circle_seg=32, **kwargs):
     lengthvec = end - start
     normal = lengthvec / np.linalg.norm(lengthvec) # normal vector from bottom -> top
     triangles = []

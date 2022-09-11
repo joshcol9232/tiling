@@ -2,12 +2,11 @@ import dualgrid as dg
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-import meshgen
 
 # Make a Basis object. There are some presets available in the `utils`.
-basis = dg.utils.surface_with_n_rotsym(7, centred=True)   # 2D structure with 11-fold rotational symmetry
+#basis = dg.utils.surface_with_n_rotsym(7, centred=True)   # 2D structure with 11-fold rotational symmetry
 #basis = dg.utils.penrose_basis()          # Section of Penrose tiling.
-#basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
+basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
 # basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
 
 print("OFFSETS:", basis.offsets)
@@ -63,23 +62,13 @@ else:
 # Render the graph using matplotlib. Support for 2D and 3D crystals, 4D and above gets truncated.
 # i.e, First 3 elements of vectors are plotted.
 if basis.dimensions == 2:   # Fill 2D tiling with colour purely for aesthetics.
-    # dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=0.0)
-    # print(cells)
+    dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=0.0)
 
-    G = dg.utils.graph_from_cells(cells)
-    print("Nodes:", G.nodes[0], G.adj)
-    dg.utils.save_graph_to_file(G, "graph_out.stl", 0.1)
-
-    # dg.utils.graph_from_cells(cells) # Uncomment to see graph render.
-    dg.utils.render_graph_wire(G, ax)
     ax.autoscale(enable=True)  # Zoom out to fit whole tiling
     ax.set_axis_off()
-
 elif basis.dimensions == 3:
     dg.utils.render_cells_solid(cells, ax)
     ax.autoscale(enable=True)
-    G = dg.utils.graph_from_cells(cells)
-    dg.utils.save_graph_to_file(G, "graph_out.stl", 0.1)
 else:
     print("Generating graph...")
     G = dg.utils.graph_from_cells(cells)
@@ -109,9 +98,13 @@ wireframe = dg.utils.generate_wires(G)
 """
 # print(wireframe)
 
-# Example of generating an STL wireframe mesh. NOTE: This can take a long time, depending on node count etc.
-# Recommended to use a low k_range value (defined above).
+# Example of generating an STL wireframe mesh. NOTE: This can take a while with large node counts.
+# Recommended to use a low k_range value (defined above) at first.
 """
-mesh = dg.utils.generate_wire_mesh_stl(G, verbose=True)
-mesh.write("G.stl")
+print("SAVING TO STL: graph_out.stl ...")
+if type(G) == type(None): # Make graph if it doesn't already exist
+    G = dg.utils.graph_from_cells(cells)
+# Specify path, and rod radius
+dg.utils.export_graph_to_stl(G, "graph_out.stl", 0.1)
+print("DONE :)")
 """

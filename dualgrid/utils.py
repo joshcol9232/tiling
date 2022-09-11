@@ -5,8 +5,6 @@ from matplotlib import cm
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
-# import pygmsh
-import meshgen
 import time
 import networkx as nx
 
@@ -201,25 +199,21 @@ def graph_from_cells(cells):
 
     return G
 
-
-def save_graph_to_file(G, filepath, rod_radius):
-    fo = meshgen.new_stl(filepath)
+def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
+    fo = dg.meshgen.new_stl(filepath)
 
     for edge in G.edges:
         vs = [G.nodes[e]["position"].tolist() for e in edge]
-        print(vs)
-        # ax.plot(vs[:,0], vs[:,1], "%s-" % edge_colour, linewidth=edge_thickness, alpha=edge_alpha)
         if len(vs[0]) == 2:
             vs[0].append(0)
             vs[1].append(0)
 
         vs = np.array(vs)
-        c = meshgen.make_rounded_cylinder(vs[0], vs[1], rod_radius, circle_seg=32, longitudes=8)
+        c = dg.meshgen.make_rounded_cylinder(vs[0], vs[1], rod_radius, **kwargs)
         c.write(fo)
 
+
     fo.close()
-
-
 
 """ RENDERING
 """
