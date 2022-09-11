@@ -134,9 +134,9 @@ def add_hemisphere_segment(triangles, v1, v2, centre, dir, r0, a0, a1, longitude
     phi = np.linspace(0, np.pi/2, num=longitudes)[:-1]
     cosphi = np.cos(phi)
     sinphi = np.sin(phi)
-    print(phi)
+    #print(phi)
     for i in range(len(phi)-1):
-        print("DOING PHI:", phi[i])
+        #print("DOING PHI:", phi[i])
         # v1, v2, centre, radius, a
         # anticlockwise from bottom corner 0 -> 3 of square tile.
         r_lower = r0 * cosphi[i]
@@ -158,7 +158,7 @@ def add_hemisphere_segment(triangles, v1, v2, centre, dir, r0, a0, a1, longitude
         circle_eq(v1, v2, centre, r0 * cosphi[-1], a1) + dir * r0 * sinphi[-1],
         centre + dir * r0, # Top of sphere
     ])
-    print("Cap placed:", triangles[-3:])
+    #print("Cap placed:", triangles[-3:])
 
 
 
@@ -218,7 +218,7 @@ if __name__ == "__main__":
     # c = Shape.from_triangles([verts])
     # c = make_circle(np.array([1.0, 0.0, 0.2]), 1.0, np.array([1.0, 0.0, 1.0]), trinum=128)
     # c = make_cylinder(np.zeros(3), np.array([0.0, 0.0, 3.0]), 1.0, circle_seg=8)
-    c = make_rounded_cylinder(np.zeros(3), np.array([0, 0, 3]), 1.0, circle_seg=32, longitudes=32)
+    c = make_rounded_cylinder(np.zeros(3), np.array([0, 0, 3]), 1.0, circle_seg=32, longitudes=8)
     # c += np.array([2.0, 2.0, 2.0])
     # m = Rot.from_euler("x", np.pi/4.0).as_matrix()
     #c.transform(m)

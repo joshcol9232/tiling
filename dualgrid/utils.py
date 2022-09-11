@@ -214,7 +214,7 @@ def save_graph_to_file(G, filepath, rod_radius):
             vs[1].append(0)
 
         vs = np.array(vs)
-        c = meshgen.make_cylinder(vs[0], vs[1], rod_radius)
+        c = meshgen.make_rounded_cylinder(vs[0], vs[1], rod_radius, circle_seg=32, longitudes=8)
         c.write(fo)
 
     fo.close()
