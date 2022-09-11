@@ -5,7 +5,6 @@ from matplotlib import cm
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
-import pygmsh
 import time
 import networkx as nx
 
@@ -168,7 +167,7 @@ def filter_cells(cells, filter, filter_args=[], filter_centre=None, fast_filter=
     return cells[filter_results]
 
 def graph_from_cells(cells):
-    """ 
+    """
     Returns a networkx graph given a list of cells.
     """
     G = nx.Graph()
@@ -200,6 +199,21 @@ def graph_from_cells(cells):
 
     return G
 
+def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
+    fo = dg.meshgen.new_stl(filepath)
+
+    for edge in G.edges:
+        vs = [G.nodes[e]["position"].tolist() for e in edge]
+        if len(vs[0]) == 2:
+            vs[0].append(0)
+            vs[1].append(0)
+
+        vs = np.array(vs)
+        c = dg.meshgen.make_rounded_cylinder(vs[0], vs[1], rod_radius, **kwargs)
+        c.write(fo)
+
+
+    fo.close()
 
 """ RENDERING
 """
@@ -231,7 +245,7 @@ def render_2D_construction(ax, basis, k_range, x_range):
                 ax.axvline(x=basis.offsets[i] + k, color=cols[i%len(cols)])
             else:
                 ax.plot(x, y, color=cols[i%len(cols)])
-    
+
     plt.xlim(-x_range, x_range)
     plt.ylim(-x_range, x_range)
 
@@ -251,7 +265,7 @@ def render_2D_cells_at_intersections(
         if scale < 1.0:
             for v in verts:
                 v -= (v - intersection) * (1.0 - scale)
-        
+
         return Polygon(verts)
 
     # Group by smallest internal angle. This will serve as the colour index
@@ -394,7 +408,7 @@ def _render_cells_solid_2D(
             middle = np.mean(verts, axis=0)
             for v in verts:
                 v -= (v - middle) * (1.0 - scale)
-        
+
         return Polygon(verts)
 
     # Group by smallest internal angle. This will serve as the colour index
@@ -423,7 +437,7 @@ def _render_cells_solid_2D(
     plt.xlim(centre_of_interest[0] - axis_size, centre_of_interest[0] + axis_size)
     plt.ylim(centre_of_interest[1] - axis_size, centre_of_interest[1] + axis_size)
     plt.gca().set_aspect("equal")   # Make sure plot is in an equal aspect ratio
-    
+
 
 
 def _render_cells_solid_3D(
@@ -553,7 +567,7 @@ def generate_wire_mesh_stl(
 
     print("CELL COUNT:", len(verts)//8)
 
-    
+
     with pygmsh.occ.Geometry() as geom:       # Use CAD-like commands
         geom.characteristic_length_max = mesh_max_length
         geom.characteristic_length_min = mesh_min_length
