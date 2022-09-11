@@ -127,21 +127,23 @@ def make_cylinder(start, end, radius, circle_seg=16):
 
     return Shape.from_triangles(triangles)
 
-def add_hemisphere_segment(triangles, v1, v2, centre, dir, r0, a0, a1, longitudes=3): # (without base)
+def add_hemisphere_segment(triangles, v1, v2, centre, dir, r0, a0, a1, longitudes=5): # (without base)
     """
     Edits triangles array by reference
     """
-    phi = np.linspace(0, np.pi/2.0, num=longitudes)
+    phi = np.linspace(0, np.pi/2, num=longitudes)[:-1]
     cosphi = np.cos(phi)
     sinphi = np.sin(phi)
+    print(phi)
     for i in range(len(phi)-1):
+        print("DOING PHI:", phi[i])
         # v1, v2, centre, radius, a
         # anticlockwise from bottom corner 0 -> 3 of square tile.
         vs = [
-            circle_eq(v1 * cosphi[i], v2 * cosphi[i], centre, r0 * cosphi[i], a0) + dir * sinphi[i],
-            circle_eq(v1 * cosphi[i], v2 * cosphi[i], centre, r0 * cosphi[i], a1) + dir * sinphi[i],
-            circle_eq(v1 * cosphi[i+1], v2 * cosphi[i+1], centre, r0 * cosphi[i+1], a1) + dir * sinphi[i+1],
-            circle_eq(v1 * cosphi[i+1], v2 * cosphi[i+1], centre, r0 * cosphi[i+1], a0) + dir * sinphi[i+1]
+            circle_eq(v1 * cosphi[i], v2 * cosphi[i], centre, r0 * cosphi[i], a0) + dir * r0 * sinphi[i],
+            circle_eq(v1 * cosphi[i], v2 * cosphi[i], centre, r0 * cosphi[i], a1) + dir * r0 * sinphi[i],
+            circle_eq(v1 * cosphi[i+1], v2 * cosphi[i+1], centre, r0 * cosphi[i+1], a1) + dir * r0 * sinphi[i+1],
+            circle_eq(v1 * cosphi[i+1], v2 * cosphi[i+1], centre, r0 * cosphi[i+1], a0) + dir * r0 * sinphi[i+1]
         ]
 
         # Make triangles
@@ -150,13 +152,15 @@ def add_hemisphere_segment(triangles, v1, v2, centre, dir, r0, a0, a1, longitude
 
     # final cap triangle
     triangles.append([
-        circle_eq(v1 * cosphi[-1], v2 * cosphi[-1], centre, r0 * cosphi[-1], a0),
-        circle_eq(v1 * cosphi[-1], v2 * cosphi[-1], centre, r0 * cosphi[-1], a1),
+        circle_eq(v1 * cosphi[-1], v2 * cosphi[-1], centre, r0 * cosphi[-1], a0) + dir * r0 * sinphi[-1],
+        circle_eq(v1 * cosphi[-1], v2 * cosphi[-1], centre, r0 * cosphi[-1], a1) + dir * r0 * sinphi[-1],
         centre + dir * r0, # Top of sphere
     ])
+    print("Cap placed:", triangles[-3:])
 
 
-def make_rounded_cylinder(start, end, radius, circle_seg=16):
+
+def make_rounded_cylinder(start, end, radius, circle_seg=16, **kwargs):
     lengthvec = end - start
     normal = lengthvec / np.linalg.norm(lengthvec) # normal vector from bottom -> top
     triangles = []
@@ -187,10 +191,10 @@ def make_rounded_cylinder(start, end, radius, circle_seg=16):
         anext += da
         prevtmp = circle_eq(v1, v2, start, radius, anext) # next segment
         # Top rounded end
-        add_hemisphere_segment(triangles, v1, v2, start, -normal, radius, anext-da, anext, longitudes=3)
+        add_hemisphere_segment(triangles, v1, v2, start, -normal, radius, anext-da, anext, **kwargs)
 
         # Bottom rounded end. TODO: top_tris can be copied, flipped and moved to the bottom of the cylinder
-        add_hemisphere_segment(triangles, v1, v2, end, normal, radius, anext-da, anext, longitudes=3)
+        add_hemisphere_segment(triangles, v1, v2, end, normal, radius, anext-da, anext, **kwargs)
 
         # Side pannels (two to form square)
         triangles.append(np.array([prev, prevtmp, prevtmp + lengthvec])) # top -> bottom
@@ -212,11 +216,11 @@ if __name__ == "__main__":
     # c = Shape.from_triangles([verts])
     # c = make_circle(np.array([1.0, 0.0, 0.2]), 1.0, np.array([1.0, 0.0, 1.0]), trinum=128)
     # c = make_cylinder(np.zeros(3), np.array([0.0, 0.0, 3.0]), 1.0, circle_seg=8)
-    c = make_rounded_cylinder(np.zeros(3), np.array([0.0, 0.0, 3.0]), 1.0, circle_seg=8)
-    c += np.array([2.0, 2.0, 2.0])
-    m = Rot.from_euler("x", np.pi/4.0).as_matrix()
+    c = make_rounded_cylinder(np.zeros(3), np.array([0.0, 0.0, 0.01]), 3.0, circle_seg=32, longitudes=100)
+    # c += np.array([2.0, 2.0, 2.0])
+    # m = Rot.from_euler("x", np.pi/4.0).as_matrix()
     #c.transform(m)
-    c *= m
+    # c *= m
 
     fo = new_stl("meshgenout.stl")
     c.write(fo)
