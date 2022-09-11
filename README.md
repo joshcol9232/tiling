@@ -25,7 +25,6 @@ Note: Ensure that `main.py` (or your Python file) is being executed from within 
 - `numpy`
 - `matplotlib`
 - `networkx`
-- `pygmsh`
 
 ## Collaboration, making changes:
 
