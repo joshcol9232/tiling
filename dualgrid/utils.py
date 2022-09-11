@@ -199,22 +199,6 @@ def graph_from_cells(cells):
 
     return G
 
-def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
-    fo = dg.meshgen.new_stl(filepath)
-
-    for edge in G.edges:
-        vs = [G.nodes[e]["position"].tolist() for e in edge]
-        if len(vs[0]) == 2:
-            vs[0].append(0)
-            vs[1].append(0)
-
-        vs = np.array(vs)
-        c = dg.meshgen.make_rounded_cylinder(vs[0], vs[1], rod_radius, **kwargs)
-        c.write(fo)
-
-
-    fo.close()
-
 """ RENDERING
 """
 def vertex_positions_from_graph(G):
@@ -540,7 +524,23 @@ def generate_wires(G):
 
     return wires
 
+def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
+    fo = dg.meshgen.new_stl(filepath)
 
+    for edge in G.edges:
+        vs = [G.nodes[e]["position"].tolist() for e in edge]
+        if len(vs[0]) == 2:
+            vs[0].append(0)
+            vs[1].append(0)
+
+        vs = np.array(vs)
+        c = dg.meshgen.make_rounded_cylinder(vs[0], vs[1], rod_radius, **kwargs)
+        c.write(fo)
+
+
+    fo.close()
+
+"""
 def generate_wire_mesh_stl(
     G,
     wire_radius=0.1,
@@ -594,7 +594,7 @@ def generate_wire_mesh_stl(
     print("CELL COUNT:", len(verts)//8)
 
     return mesh
-
+"""
 
 
 """
@@ -637,6 +637,7 @@ def generate_wire_mesh(
     return mesh
 """
 
+"""
 def generate_solid_mesh(cell_dict, **kwargs):
     with pygmsh.geo.Geometry() as geom:
         for cells in cell_dict.values():
@@ -647,3 +648,4 @@ def generate_solid_mesh(cell_dict, **kwargs):
         mesh = geom.generate_mesh(**kwargs)
 
     return mesh
+"""
