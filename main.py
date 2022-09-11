@@ -5,9 +5,9 @@ import numpy as np
 import meshgen
 
 # Make a Basis object. There are some presets available in the `utils`.
-# basis = dg.utils.surface_with_n_rotsym(11, centred=True)   # 2D structure with 11-fold rotational symmetry
-basis = dg.utils.penrose_basis()          # Section of Penrose tiling.
-# basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
+basis = dg.utils.surface_with_n_rotsym(7, centred=True)   # 2D structure with 11-fold rotational symmetry
+#basis = dg.utils.penrose_basis()          # Section of Penrose tiling.
+#basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
 # basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
 
 print("OFFSETS:", basis.offsets)
@@ -23,7 +23,7 @@ k_range = 2
 # matplotlib starts to struggle with large numbers of shapes. I have
 # done an if statement here to change it for 3D+.
 if basis.dimensions > 2:
-    k_range = 3
+    k_range = 2
 
 # Run the algorithm. k_ranges sets the number of construction planes used in the method.
 # The function outputs a list of Cell objects.
@@ -66,7 +66,7 @@ if basis.dimensions == 2:   # Fill 2D tiling with colour purely for aesthetics.
     # dg.utils.render_cells_solid(cells, ax, scale=0.85, edge_thickness=0.0)
     # print(cells)
 
-    G = dg.utils.graph_from_cells([cells[0]])
+    G = dg.utils.graph_from_cells(cells)
     print("Nodes:", G.nodes[0], G.adj)
     dg.utils.save_graph_to_file(G, "graph_out.stl", 0.1)
 
@@ -75,11 +75,11 @@ if basis.dimensions == 2:   # Fill 2D tiling with colour purely for aesthetics.
     ax.autoscale(enable=True)  # Zoom out to fit whole tiling
     ax.set_axis_off()
 
-
-
 elif basis.dimensions == 3:
     dg.utils.render_cells_solid(cells, ax)
     ax.autoscale(enable=True)
+    G = dg.utils.graph_from_cells(cells)
+    dg.utils.save_graph_to_file(G, "graph_out.stl", 0.1)
 else:
     print("Generating graph...")
     G = dg.utils.graph_from_cells(cells)
