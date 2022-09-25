@@ -10,7 +10,7 @@ import networkx as nx
 from multiprocessing import Pool
 from functools import partial
 
-# import pygmsh
+import pygmsh
 
 """ OFFSET generation
 """
@@ -554,6 +554,25 @@ def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
 
     fo.close()
 
+def export_graph_to_stl_single_core(G, filepath, rod_radius, **kwargs):
+    fo = dg.meshgen.new_stl(filepath)
+    cs = []
+
+    for edge in G.edges:
+        vs = [G.nodes[e]["position"].tolist() for e in edge]
+        vs[0] = vs[0][:3]
+        vs[1] = vs[1][:3]
+        if len(vs[0]) == 2:
+            vs[0].append(0)
+            vs[1].append(0)
+
+        cs.append(dg.meshgen.make_rounded_cylinder(np.array(vs), rod_radius, **kwargs))
+
+    for c in cs:
+        c.write(fo)
+
+    fo.close()
+
 def export_graph_to_stl_cpp(G, filepath, rod_radius, radial_seg, long_seg):
     rods = []
     for edge in G.edges:
@@ -571,7 +590,7 @@ def export_graph_to_stl_cpp(G, filepath, rod_radius, radial_seg, long_seg):
     dg.crymshpy.export_stl(filepath, np.array(rods), rod_radius, radial_seg, long_seg)
 
 
-"""
+
 def generate_wire_mesh_stl(
     G,
     wire_radius=0.1,
@@ -625,7 +644,7 @@ def generate_wire_mesh_stl(
     print("CELL COUNT:", len(verts)//8)
 
     return mesh
-"""
+
 
 """
 def generate_wire_mesh(
