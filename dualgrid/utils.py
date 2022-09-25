@@ -640,9 +640,6 @@ def generate_wire_mesh_stl(
 
         mesh = geom.generate_mesh(**kwargs)
 
-
-    print("CELL COUNT:", len(verts)//8)
-
     return mesh
 
 

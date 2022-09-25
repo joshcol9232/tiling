@@ -1,4 +1,4 @@
 .idea/
 __pycache__
 *.stl
-stl_test_new.py
+stl_test_new*
