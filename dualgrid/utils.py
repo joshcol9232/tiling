@@ -7,7 +7,10 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import time
 import networkx as nx
+from multiprocessing import Pool
+from functools import partial
 
+# import pygmsh
 
 """ OFFSET generation
 """
@@ -526,19 +529,47 @@ def generate_wires(G):
 
 def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
     fo = dg.meshgen.new_stl(filepath)
+    rods = []
 
     for edge in G.edges:
         vs = [G.nodes[e]["position"].tolist() for e in edge]
+        vs[0] = vs[0][:3]
+        vs[1] = vs[1][:3]
+        if len(vs[0]) == 2:
+            vs[0].append(0)
+            vs[1].append(0)
+
+        rods.append(np.array(vs))
+
+    p = Pool()
+    cs = p.map(partial(dg.meshgen.make_rounded_cylinder, radius=rod_radius, **kwargs), rods)
+
+        # c = dg.meshgen.make_rounded_cylinder(vs[0], vs[1], rod_radius, **kwargs)
+        # cs.append(c)
+
+    p.close()
+
+    for c in cs:
+        c.write(fo)
+
+    fo.close()
+
+def export_graph_to_stl_cpp(G, filepath, rod_radius, radial_seg, long_seg):
+    rods = []
+    for edge in G.edges:
+        vs = [G.nodes[e]["position"].tolist() for e in edge]
+        vs[0] = vs[0][:3]
+        vs[1] = vs[1][:3]
         if len(vs[0]) == 2:
             vs[0].append(0)
             vs[1].append(0)
 
         vs = np.array(vs)
-        c = dg.meshgen.make_rounded_cylinder(vs[0], vs[1], rod_radius, **kwargs)
-        c.write(fo)
+        rods.append(vs)
 
+    print("PY -> NUMBER OF RODS:", len(rods))
+    dg.crymshpy.export_stl(filepath, np.array(rods), rod_radius, radial_seg, long_seg)
 
-    fo.close()
 
 """
 def generate_wire_mesh_stl(
