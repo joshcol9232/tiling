@@ -538,7 +538,9 @@ def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
             vs[0].append(0)
             vs[1].append(0)
 
-        rods.append(np.array(vs))
+        roddistvec = np.array(vs[1]) - np.array(vs[0])
+        if np.dot(roddistvec, roddistvec) > 0:
+            rods.append(np.array(vs))
 
     p = Pool()
     cs = p.map(partial(dg.meshgen.make_rounded_cylinder, radius=rod_radius, **kwargs), rods)

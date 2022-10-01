@@ -5,9 +5,9 @@ import numpy as np
 
 # Make a Basis object. There are some presets available in the `utils`.
 #basis = dg.utils.surface_with_n_rotsym(7, centred=True)   # 2D structure with 11-fold rotational symmetry
-#basis = dg.utils.penrose_basis()          # Section of Penrose tiling.
-basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
-# basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
+# basis = dg.utils.penrose_basis()          # Section of Penrose tiling.
+# basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
+basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
 
 print("OFFSETS:", basis.offsets)
 G = None
