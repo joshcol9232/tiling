@@ -527,7 +527,7 @@ def generate_wires(G):
 
     return wires
 
-def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
+def _get_rods(G):
     rods = []
 
     for edge in G.edges:
@@ -542,6 +542,17 @@ def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
         if np.dot(roddistvec, roddistvec) > 0:
             rods.append(np.array(vs))
 
+    return np.array(rods)
+
+def export_graph_to_stl(G, filepath, rod_radius, single_core=False, **kwargs):
+    """
+    Save a crystal structure to an STL file. Truncates to 3D.
+    """
+    if single_core:
+        return _export_graph_to_stl_single_core(G, filepath, rod_radius, **kwargs)
+
+    rods = _get_rods(G)
+
     p = Pool()
     cs = p.map(partial(dg.meshgen.make_rounded_cylinder, radius=rod_radius, **kwargs), rods)
     p.close()
@@ -552,20 +563,14 @@ def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
 
     fo.close()
 
-def export_graph_to_stl_single_core(G, filepath, rod_radius, **kwargs):
-    fo = dg.meshgen.new_stl(filepath)
+def _export_graph_to_stl_single_core(G, filepath, rod_radius, **kwargs):
     cs = []
+    rods = _get_rods(G)
 
-    for edge in G.edges:
-        vs = [G.nodes[e]["position"].tolist() for e in edge]
-        vs[0] = vs[0][:3]
-        vs[1] = vs[1][:3]
-        if len(vs[0]) == 2:
-            vs[0].append(0)
-            vs[1].append(0)
+    for rod in rods:
+        cs.append(dg.meshgen.make_rounded_cylinder(rod, rod_radius, **kwargs))
 
-        cs.append(dg.meshgen.make_rounded_cylinder(np.array(vs), rod_radius, **kwargs))
-
+    fo = dg.meshgen.new_stl(filepath)
     for c in cs:
         c.write(fo)
 
