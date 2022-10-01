@@ -5,9 +5,9 @@ import numpy as np
 
 # Make a Basis object. There are some presets available in the `utils`.
 #basis = dg.utils.surface_with_n_rotsym(7, centred=True)   # 2D structure with 11-fold rotational symmetry
-#basis = dg.utils.penrose_basis()          # Section of Penrose tiling.
-basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
-# basis = dg.utils.n_dimensional_cubic_basis(4) # 4D cubic structure
+# basis = dg.utils.penrose_basis()          # Section of Penrose tiling.
+# basis = dg.utils.icosahedral_basis()      # 3D quasicrystalline structure
+basis = dg.utils.n_dimensional_cubic_basis(3) # 4D cubic structure
 
 print("OFFSETS:", basis.offsets)
 G = None
@@ -104,6 +104,16 @@ wireframe = dg.utils.generate_wires(G)
 print("SAVING TO STL: graph_out.stl ...")
 if type(G) == type(None): # Make graph if it doesn't already exist
     G = dg.utils.graph_from_cells(cells)
-# Specify path, and rod radius
+# Specify arguments:
+# - G: networkx Graph
+# - save path
+# - rod radius
+# - single_core=False. Only use a single CPU core (False; use multithreading -> faster to generate,
+#                      no loss in quality, same file size).
+# - circle_seg=32. Resolution of cylinders produced. 32 means there are 32 side panels on cylinder.
+#                  Circle split into 32 segments. Higher -> slower to generate, higher quality
+#                  cylinders, bigger file. Should be >= 4
+# - longitudes=8. Number of longitudes on hemisphere caps on the rods. Higher -> slower to generate,
+#                 higher quality corners, bigger file. Should be >= 2
 dg.utils.export_graph_to_stl(G, "graph_out.stl", 0.1)
 print("DONE :)")
