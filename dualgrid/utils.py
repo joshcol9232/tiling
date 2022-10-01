@@ -528,7 +528,6 @@ def generate_wires(G):
     return wires
 
 def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
-    fo = dg.meshgen.new_stl(filepath)
     rods = []
 
     for edge in G.edges:
@@ -543,12 +542,9 @@ def export_graph_to_stl(G, filepath, rod_radius, **kwargs):
 
     p = Pool()
     cs = p.map(partial(dg.meshgen.make_rounded_cylinder, radius=rod_radius, **kwargs), rods)
-
-        # c = dg.meshgen.make_rounded_cylinder(vs[0], vs[1], rod_radius, **kwargs)
-        # cs.append(c)
-
     p.close()
 
+    fo = dg.meshgen.new_stl(filepath)
     for c in cs:
         c.write(fo)
 
@@ -572,126 +568,3 @@ def export_graph_to_stl_single_core(G, filepath, rod_radius, **kwargs):
         c.write(fo)
 
     fo.close()
-
-def export_graph_to_stl_cpp(G, filepath, rod_radius, radial_seg, long_seg):
-    rods = []
-    for edge in G.edges:
-        vs = [G.nodes[e]["position"].tolist() for e in edge]
-        vs[0] = vs[0][:3]
-        vs[1] = vs[1][:3]
-        if len(vs[0]) == 2:
-            vs[0].append(0)
-            vs[1].append(0)
-
-        vs = np.array(vs)
-        rods.append(vs)
-
-    print("PY -> NUMBER OF RODS:", len(rods))
-    dg.crymshpy.export_stl(filepath, np.array(rods), rod_radius, radial_seg, long_seg)
-
-
-
-def generate_wire_mesh_stl(
-    G,
-    wire_radius=0.1,
-    vertex_radius=None,
-    mesh_min_length=0.005,   # Arbitrary defaults
-    mesh_max_length=0.05,
-    **kwargs                # Keyword arguments to the mesh generator
-):
-    # Get vertex positions
-    verts = vertex_positions_from_graph(G)
-
-    # If 2D, add a z coordinate of 0
-    is_2D = len(verts[0]) == 2
-    if is_2D:
-        new_verts = []
-        for v in verts:
-            new_verts.append([v[0], v[1], 0.0])
-        verts = np.array(new_verts)
-
-    # Make wiremesh and saves to stl file
-    if type(vertex_radius) == type(None):
-        vertex_radius = wire_radius
-    print("VERTEX RAD:", vertex_radius)
-
-    print("CELL COUNT:", len(verts)//8)
-
-
-    with pygmsh.occ.Geometry() as geom:       # Use CAD-like commands
-        geom.characteristic_length_max = mesh_max_length
-        geom.characteristic_length_min = mesh_min_length
-
-        for v in verts:
-            geom.add_ball(v, vertex_radius)
-
-        for edge in G.edges:
-            vs = np.array([G.nodes[e]["position"][:3] for e in edge]) # Truncate to 3D
-            # If 2D, add a z coordinate of 0
-            if is_2D:
-                new_verts = []
-                for v in vs:
-                    new_verts.append([v[0], v[1], 0.0])
-                vs = np.array(new_verts)
-
-        wires = generate_wires(G)
-        for wire in wires:
-            geom.add_cylinder(wire[0], wire[1] - wire[0], wire_radius)
-
-        mesh = geom.generate_mesh(**kwargs)
-
-    return mesh
-
-
-"""
-def generate_wire_mesh(
-        cell_dict,
-        wire_radius=0.1,
-        vertex_radius=None,
-        mesh_min_length=0.005,   # Arbitrary defaults
-        mesh_max_length=0.05,
-        filter=is_point_within_cube,
-        filter_centre=np.zeros(3),
-        filter_whole_cells=True,
-        filter_args=[],
-        fast_filter=False,
-        **kwargs                # Keyword arguments to the mesh generator
-):
-    # Make wiremesh and saves to stl file
-    if not vertex_radius:
-        vertex_radius = wire_radius
-
-    verts, edges = verts_and_edges_from_cells(cell_dict, filter=filter, filter_centre=filter_centre, filter_args=filter_args, filter_whole_cells=filter_whole_cells, fast_filter=fast_filter)
-
-    print("CELL COUNT:", len(verts)//8)
-
-    with pygmsh.occ.Geometry() as geom:       # Use CAD-like commands
-        geom.characteristic_length_max = mesh_max_length
-        geom.characteristic_length_min = mesh_min_length
-
-        for v in verts:
-            geom.add_ball(v, vertex_radius)
-
-        for e in edges:
-            geom.add_cylinder(verts[e[0]], verts[e[1]] - verts[e[0]], wire_radius)
-
-        mesh = geom.generate_mesh(**kwargs)
-
-
-    print("CELL COUNT:", len(verts)//8)
-
-    return mesh
-"""
-
-"""
-def generate_solid_mesh(cell_dict, **kwargs):
-    with pygmsh.geo.Geometry() as geom:
-        for cells in cell_dict.values():
-            for c in cells:
-                for face in c.get_faces():
-                    geom.add_polygon(face, mesh_size=0.1)
-
-        mesh = geom.generate_mesh(**kwargs)
-
-    return mesh
-"""
