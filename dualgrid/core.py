@@ -2,18 +2,32 @@ import numpy as np
 import itertools
 
 def _get_k_combos(k_range, dimensions):
+    """ 
+    Returns all possible comparison between two sets of lines for dimension number "dimensions" and max k_range (index range)
+    E.g for 2D with a k range of 1 this is: 
+
+      k_combos = [[-1 -1] [-1  0] [-1  1] [ 0 -1] [ 0  0] [ 0  1] [ 1 -1] [ 1  0] [ 1  1]]
+     
+    Then, when comparing two 2D construction sets, this compares line (-1) of set 1, with line (-1) of set 2, etc...
+    """
     return np.array(list(itertools.product(*[ [k for k in range(1-k_range, k_range)] for _d in range(dimensions) ])))
 
 class ConstructionSet:
-    def __init__(self, normal, offset, setnum):
+    """
+    A class to represent a set of parallel lines / planes / n dimensional parallel structure.
+    It implements a single method to return all intersections with another ConstructionSet.
+    """
+    def __init__(self, normal, offset):
+        """
+        normal: Normal vector to this construction set.
+        offset: Offset of these lines from the origin.
+        """
         self.normal = normal
         self.offset = offset
-        self.setnum = setnum
 
     def get_intersections_with(self, k_range, others):
         """
-        If this plane intersects with two other planes at a point, this function
-        will return the location of this intersection in real space.
+        Calculates all intersections between this set of lines/planes and another.
         """
         dimensions = len(self.normal)
         # Pack Cartesian coefficients into matrix.
@@ -40,6 +54,14 @@ class ConstructionSet:
         return intersections, k_combos
 
 def _get_neighbours(intersection, js, ks, basis):
+    """
+    For a given intersection, this function returns the grid-space indices of the spaces surrounding the intersection.
+    A "grid-space index" is an N dimensional vector of integer values where N is the number of basis vectors. Each element
+    corresponds to an integer multiple of a basis vector, which gives the final location of the tile vertex.
+
+    There will always be a set number of neighbours depending on the number of dimensions. For 2D this is 4 (to form a tile),
+    for 3D this is 8 (to form a cube), etc...
+    """
     # Each possible neighbour of intersection. See eq. 4.5 in de Bruijn paper
     # For example:
     # [0, 0], [0, 1], [1, 0], [1, 1] for 2D
@@ -47,17 +69,15 @@ def _get_neighbours(intersection, js, ks, basis):
 
     indices = basis.gridspace(intersection)
 
-    # DEBUG print("Root indices before loading:", indices)
     # Load known indices into indices array
     for index, j in enumerate(js):
         indices[j] = ks[index]
 
-    # DEBUG print("Getting neighbours for:", intersection)
-    # DEBUG print("Root indices:", indices)
-    # First off copy the intersection indices 8 times
+    # Copy the intersection indices. This is then incremented for the remaining indices depending on what neighbour it is.
     neighbours = [ np.array([ v for v in indices ]) for _i in range(len(directions)) ]
 
     # Quick note: Kronecker delta function -> (i == j) = False (0) or True (1) in python. Multiplication of bool is allowed
+    # Also from de Bruijn paper 1.
     deltas = [np.array([(j == js[i]) * 1 for j in range(len(basis.vecs))]) for i in range(basis.dimensions)]
 
     # Apply equation 4.5 in de Bruijn's paper 1, expanded for any basis len and extra third dimension
@@ -66,7 +86,11 @@ def _get_neighbours(intersection, js, ks, basis):
 
     return neighbours
 
+
 class Basis:
+    """
+    Utility class for defining a set of basis vectors. Has conversion functions between different spaces.
+    """
     def __init__(self, vecs, offsets):
         self.vecs = vecs
         self.dimensions = len(self.vecs[0])
@@ -84,7 +108,7 @@ class Basis:
 
     def gridspace(self, r):
         """
-        Returns where a point lies in grid space.
+        Returns where a "real" point lies in grid space.
         """
         out = np.zeros(len(self.vecs), dtype=int)
 
@@ -94,9 +118,10 @@ class Basis:
         return out
 
     def get_possible_cells(self, decimals):
-        """ Function that finds all possible cell shapes in the final mesh.
-            Number of decimal places required for finite hash keys (floats are hard to == )
-            Returns a dictionary of volume : [all possible combinations of basis vector to get that volume]
+        """
+        Function that finds all possible cell shapes in the final mesh.
+        Number of decimal places required for finite hash keys (floats are hard to == )
+        Returns a dictionary of volume : [all possible combinations of basis vector to get that volume]
         """
         shapes = {}  # volume : set indices
 
@@ -112,19 +137,27 @@ class Basis:
 
         return shapes
 
-""" MAIN ALGORITHM """
+
 class Cell:
-    def __init__(self, vertices, indices, parent_sets, intersection):
+    """
+    Class to hold a set of four vertices, along with additional information
+    """
+    def __init__(self, vertices, indices, intersection):
+        """
+        verts: Corner vertices of the real tile/cell.
+        indices: The "grid space" indices of each vertex.
+        
+        """
         self.verts = vertices
         self.indices = indices
-        self.parent_sets = parent_sets
-        self.intersection = intersection # The intersection corresponding to this cell
+        self.intersection = intersection # The intersection which caused this cell's existance. Used for plotting
 
     def __repr__(self):
-        return "Cell(%s parents %s)" % (self.indices[0], self.parent_sets)
+        return "Cell(%s)" % (self.indices[0])
 
     def is_in_filter(self, *args, **kwargs):
-        """ Utility function for checking whever the rhombohedron is in rendering distance
+        """
+        Utility function for checking whever the rhombohedron is in rendering distance
         `fast` just checks the first vertex and exits, otherwise if any of the vertices are inside the filter
         then the whole cell is inside filter
         """
@@ -169,12 +202,13 @@ def get_edges_from_indices(indices):
             if abs(np.sum( indices[ind1] - indices[ind2] )) == 1:
                 edges.append([ind1, ind2])
 
-    print("FOUND EDGES:", edges)
     return np.array(edges)
 
 def _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy):
+    """
+    Retrieves all intersections between the first construction set in the index list, and the rest.
+    """
     intersections, k_combos = construction_sets[js[0]].get_intersections_with(k_range, [construction_sets[j] for j in js[1:]])
-    # DEBUG print("Intersections between plane sets %s : %d" % (js, len(intersections)))
 
     for i, intersection in enumerate(intersections):
         # Calculate neighbours for this intersection
@@ -183,13 +217,11 @@ def _get_cells_from_construction_sets(construction_sets, js, cells, k_range, bas
 
         for indices in indices_set:
             vertex = basis.realspace(indices)
-            # DEBUG print("Vertex output for %s:\t%s" % (indices, vertex))
             vertices_set.append(vertex)
 
         vertices_set = np.array(vertices_set)
-        c = Cell(vertices_set, indices_set, js, intersection)
+        c = Cell(vertices_set, indices_set, intersection)
         cells.append(c)
-
 
 
 def dualgrid_method(basis, k_range, shape_accuracy=4):
@@ -202,11 +234,13 @@ def dualgrid_method(basis, k_range, shape_accuracy=4):
     # possible_cells = basis.get_possible_cells(shape_accuracy)
 
     # Get each set of parallel planes
-    construction_sets = [ ConstructionSet(e, basis.offsets[i], i) for (i, e) in enumerate(basis.vecs) ]
+    construction_sets = [ ConstructionSet(e, basis.offsets[i]) for (i, e) in enumerate(basis.vecs) ]
 
     cells = []
     # Find intersections between each of the plane sets
-    # NOTE: Could very easily be made multithreaded (future task?).
+    # `js` corresponds to a list of construction sets to compare. For a 2D basis of length 3, it would be:
+    #   (0, 1), (0, 2), (1, 2)
+    # Which covers all possible combinations.
     for js in itertools.combinations(range(len(construction_sets)), basis.dimensions):
         _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy)
 
