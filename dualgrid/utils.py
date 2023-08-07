@@ -10,8 +10,6 @@ import networkx as nx
 from multiprocessing import Pool
 from functools import partial
 
-import pygmsh
-
 """ OFFSET generation
 """
 def offsets_fixed_around_centre(n):
