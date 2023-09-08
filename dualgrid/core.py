@@ -1,5 +1,8 @@
 import numpy as np
 import itertools
+from multiprocessing import Pool
+from functools import partial
+import os
 
 def _get_k_combos(k_range, dimensions):
     """ 
@@ -204,12 +207,13 @@ def get_edges_from_indices(indices):
 
     return np.array(edges)
 
-def _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy):
+def _get_cells_from_construction_sets(construction_sets, k_range, basis, shape_accuracy, js):
     """
     Retrieves all intersections between the first construction set in the index list, and the rest.
     """
     intersections, k_combos = construction_sets[js[0]].get_intersections_with(k_range, [construction_sets[j] for j in js[1:]])
 
+    cells = []
     for i, intersection in enumerate(intersections):
         # Calculate neighbours for this intersection
         indices_set = _get_neighbours(intersection, js, k_combos[i], basis)
@@ -223,26 +227,34 @@ def _get_cells_from_construction_sets(construction_sets, js, cells, k_range, bas
         c = Cell(vertices_set, indices_set, intersection)
         cells.append(c)
 
+    return cells
 
-def dualgrid_method(basis, k_range, shape_accuracy=4):
+def dualgrid_method(basis, k_range, shape_accuracy=4, single_threaded=False):
     """
     de Bruijn dual grid method.
     Generates and returns cells from basis given in the range given.
     Shape accuracy is the number of decimal places used to classify cell shapes
     Returns: cells, possible cell shapes
     """
-    # possible_cells = basis.get_possible_cells(shape_accuracy)
-
     # Get each set of parallel planes
     construction_sets = [ ConstructionSet(e, basis.offsets[i]) for (i, e) in enumerate(basis.vecs) ]
 
-    cells = []
-    # Find intersections between each of the plane sets
-    # `js` corresponds to a list of construction sets to compare. For a 2D basis of length 3, it would be:
+    # `j_combos` corresponds to a list of construction sets to compare. For a 2D basis of length 3, it would be:
     #   (0, 1), (0, 2), (1, 2)
     # Which covers all possible combinations.
-    for js in itertools.combinations(range(len(construction_sets)), basis.dimensions):
-        _get_cells_from_construction_sets(construction_sets, js, cells, k_range, basis, shape_accuracy)
+    j_combos = itertools.combinations(range(len(construction_sets)), basis.dimensions)
 
-    return cells
+    # Find intersections between each of the plane sets, and retrive cells
+    cells = []
+    if single_threaded:
+        for js in j_combos:
+            cells.append(_get_cells_from_construction_sets(construction_sets, k_range, basis, shape_accuracy, js))
+    else:
+        # Use a `Pool` to distribute work between CPU cores.
+        p = Pool()
+        work_func = partial(_get_cells_from_construction_sets, construction_sets, k_range, basis, shape_accuracy)
+        cells = p.map(work_func, j_combos)
+
+    # Cells is a list of lists -> flatten to a flat 1D list
+    return [cell_list for worker_result in cells for cell_list in worker_result]
 
