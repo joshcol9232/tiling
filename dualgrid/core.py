@@ -2,7 +2,6 @@ import numpy as np
 import itertools
 from multiprocessing import Pool
 from functools import partial
-import os
 
 def _get_k_combos(k_range, dimensions):
     """ 
