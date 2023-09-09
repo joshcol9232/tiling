@@ -34,15 +34,15 @@ class ConstructionSet:
         dimensions = len(self.normal)
         # Pack Cartesian coefficients into matrix.
         # E.g ax + by + cz = d.     a, b, c for each
-        coef = np.matrix([self.normal, *[ o.normal for o in others ]])
+        coef_matrix = np.array([self.normal, *[ o.normal for o in others ]])
 
         # Check for singular matrix
-        if np.linalg.det(coef) == 0:
+        if np.linalg.det(coef_matrix) == 0:
             print("WARNING: Unit vectors form singular matrices.")
             return [], []
 
         # get inverse of coefficient matrix
-        coef_inv = np.linalg.inv(coef)
+        coef_inv = np.linalg.inv(coef_matrix)
 
         k_combos = _get_k_combos(k_range, dimensions)
 
