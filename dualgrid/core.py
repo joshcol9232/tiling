@@ -155,6 +155,9 @@ class Cell:
     def __repr__(self):
         return "Cell(%s)" % (self.indices[0])
 
+    def __eq__(self, other):
+        return self.indices == other.indices
+
     def is_in_filter(self, *args, **kwargs):
         """
         Utility function for checking whever the rhombohedron is in rendering distance
@@ -224,6 +227,9 @@ def _get_cells_from_construction_sets(construction_sets, js, cells, k_range, bas
         cells.append(c)
 
 
+def construction_sets_from_basis(basis):
+    return [ ConstructionSet(e, basis.offsets[i]) for (i, e) in enumerate(basis.vecs) ]
+
 def dualgrid_method(basis, k_range, shape_accuracy=4):
     """
     de Bruijn dual grid method.
@@ -234,7 +240,7 @@ def dualgrid_method(basis, k_range, shape_accuracy=4):
     # possible_cells = basis.get_possible_cells(shape_accuracy)
 
     # Get each set of parallel planes
-    construction_sets = [ ConstructionSet(e, basis.offsets[i]) for (i, e) in enumerate(basis.vecs) ]
+    construction_sets = construction_sets_from_basis(basis)
 
     cells = []
     # Find intersections between each of the plane sets
