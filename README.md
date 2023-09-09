@@ -31,7 +31,7 @@ Note: Ensure that `main.py` (or your Python file) is being executed from within 
 To run the tests, run:
 
 ```bash
-python -m unittest discover -s tests
+python -m pytest
 ```
 
 This currently checks that no output has changed.

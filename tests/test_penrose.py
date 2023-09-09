@@ -7,7 +7,7 @@ import numpy as np
 PENROSE_BASIS = dg.utils.penrose_basis(random_offsets=False)
 
 
-def test_for_k_range(k_range, single_threaded=True):
+def add_test_for_k_range(k_range, single_threaded=True):
     print("--:: TestPenrose::test_k_max_%d, single_threaded=%s starting." % (k_range, single_threaded))
 
     cells = dg.dualgrid_method(PENROSE_BASIS, k_range, single_threaded=single_threaded)
@@ -86,19 +86,19 @@ class TestPenrose(unittest.TestCase):
         print("--:: TestPenrose::test_k_max_1 finished.")
 
     def test_k_max_2_single_thread(self):
-        test_for_k_range(2, single_threaded=True)
+        add_test_for_k_range(2, single_threaded=True)
 
     def test_k_max_3_single_thread(self):
-        test_for_k_range(3, single_threaded=True)
+        add_test_for_k_range(3, single_threaded=True)
 
     def test_k_max_4_single_thread(self):
-        test_for_k_range(4, single_threaded=True)
+        add_test_for_k_range(4, single_threaded=True)
 
     def test_k_max_3_multithreaded(self):
-        test_for_k_range(3, single_threaded=False)
+        add_test_for_k_range(3, single_threaded=False)
 
     def test_k_max_4_multithreaded(self):
-        test_for_k_range(4, single_threaded=False)
+        add_test_for_k_range(4, single_threaded=False)
 
 if __name__ == '__main__':
     unittest.main()
