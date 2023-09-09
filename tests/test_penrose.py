@@ -62,7 +62,7 @@ class TestPenrose(unittest.TestCase):
         print("--:: TestPenrose::test_k_max_1 starting.")
 
         k_range = 1
-        cells = dg.dualgrid_method(PENROSE_BASIS, k_range)
+        cells = dg.dualgrid_method(PENROSE_BASIS, k_range, single_threaded=True)
         verts = np.array([ cell.verts for cell in cells ])
 
         testutil.save_test_figure("TestPenrose_test_k_max_1.pdf", cells)
@@ -73,7 +73,7 @@ class TestPenrose(unittest.TestCase):
         print("--:: TestPenrose::test_k_max_2 starting.")
 
         k_range = 2
-        cells = dg.dualgrid_method(PENROSE_BASIS, k_range)
+        cells = dg.dualgrid_method(PENROSE_BASIS, k_range, single_threaded=True)
         verts = np.array([ cell.verts for cell in cells ])
         testutil.save_test_figure("TestPenrose_test_k_max_2.pdf", cells)
 

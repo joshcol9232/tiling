@@ -259,6 +259,7 @@ def dualgrid_method(basis, k_range, shape_accuracy=4, single_threaded=False):
         p = Pool()
         work_func = partial(_get_cells_from_construction_sets, construction_sets, k_range, basis, shape_accuracy)
         cells = p.map(work_func, j_combos)
+        p.close()
 
     # Cells is a list of lists -> flatten to a flat 1D list
     return [cell_list for worker_result in cells for cell_list in worker_result]
