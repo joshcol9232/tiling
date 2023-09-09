@@ -2,5 +2,6 @@
 __pycache__
 *.stl
 stl_test_new*
+benchmarks/
 tests/testout/*.pdf
 tests/testout/*.npy

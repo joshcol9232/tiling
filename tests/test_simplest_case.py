@@ -19,7 +19,7 @@ class TestSimplestCase(unittest.TestCase):
         # ---
         print("--:: TestSimplestCase::test_square_k1 starting.")
 
-        cells = dg.dualgrid_method(BASIS, 1)  # Should be a single square
+        cells = dg.dualgrid_method(BASIS, 1, single_threaded=True)  # Should be a single square
         verts = np.array([ cell.verts for cell in cells ])
         print(verts)
 
@@ -31,7 +31,7 @@ class TestSimplestCase(unittest.TestCase):
     def test_square_k2(self):
         print("--:: TestSimplestCase::test_square_k2 starting.")
 
-        cells = dg.dualgrid_method(BASIS, 2)
+        cells = dg.dualgrid_method(BASIS, 2, single_threaded=True)
         verts = np.array([ cell.verts for cell in cells ])
         testutil.save_test_figure("TestSimplestCase_test_square_k2.pdf", cells)
 

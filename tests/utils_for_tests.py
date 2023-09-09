@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 OUTPUT_PATH = "tests/testout/"
-INPUT_PATH = "tests/testinput/"
+INPUT_PATH = "tests/testref/"
 
 def save_test_figure(filename, cells):
     fig, ax = plt.subplots(1, figsize=(10, 10))
