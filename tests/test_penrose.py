@@ -15,7 +15,9 @@ def test_for_k_range(k_range, single_threaded=True):
     testutil.save_test_figure("TestPenrose_test_k_max_%d_single_thread_%s.pdf" % (k_range, single_threaded), cells)
 
     testutil.save_verts("penrose_k%d_single_thread_%s.out.npy" % (k_range, single_threaded), verts)
-    KGO_VERTS = testutil.load_verts("penrose_k%d_single_thread_%s.ref.npy" % (k_range, single_threaded))
+
+    # NOTE: Always use single-threaded result as the known good output. Should detect differences between single/multithreaded.
+    KGO_VERTS = testutil.load_verts("penrose_k%d.ref.npy" % k_range)
     np.testing.assert_allclose(verts, KGO_VERTS, err_msg="Vertices not equal for Penrose Kmax=%d, singlethreaded=%s case: \n%s\n----------------------------\n%s" % (k_range, single_threaded, verts, KGO_VERTS))
     print("--:: TestPenrose::test_k_max_%d, single_threaded=%s finished." % (k_range, single_threaded))
 
@@ -89,6 +91,14 @@ class TestPenrose(unittest.TestCase):
     def test_k_max_3_single_thread(self):
         test_for_k_range(3, single_threaded=True)
 
+    def test_k_max_4_single_thread(self):
+        test_for_k_range(4, single_threaded=True)
+
+    def test_k_max_3_multithreaded(self):
+        test_for_k_range(3, single_threaded=False)
+
+    def test_k_max_4_multithreaded(self):
+        test_for_k_range(4, single_threaded=False)
 
 if __name__ == '__main__':
     unittest.main()
