@@ -1,7 +1,7 @@
 import numpy as np
 import dualgrid as dg
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from matplotlib import cm
+from matplotlib import colormaps
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
@@ -275,7 +275,7 @@ def render_2D_cells_at_intersections(
     if colourmap_str == "":
         clrmap = lambda s: "w"
     else:
-        clrmap = cm.get_cmap(colourmap_str)
+        clrmap = colormaps[colourmap_str]
 
     for size_ratio, polygons in poly_dict.items():
         colour = clrmap(size_ratio)
@@ -409,7 +409,7 @@ def _render_cells_solid_2D(
             poly_dict[size_ratio].append(p)
 
     # Render
-    clrmap = cm.get_cmap(colourmap_str)
+    clrmap = colormaps[colourmap_str]
     for size_ratio, polygons in poly_dict.items():
         colour = clrmap(size_ratio)
         shape_coll = PatchCollection(polygons, edgecolor=edge_colour, facecolor=colour, linewidth=edge_thickness, antialiased=True)
@@ -466,7 +466,7 @@ def _render_cells_solid_3D(
 
         return faces
 
-    clrmap = cm.get_cmap(colourmap_str)
+    clrmap = colormaps[colourmap_str]
 
     if type(centre_of_interest) == type(None):
         # Find centre of interest (mean of all vertices)
