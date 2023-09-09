@@ -157,6 +157,9 @@ class Cell:
     def __repr__(self):
         return "Cell(%s)" % (self.indices[0])
 
+    def __eq__(self, other):
+        return self.indices == other.indices
+
     def is_in_filter(self, *args, **kwargs):
         """
         Utility function for checking whever the rhombohedron is in rendering distance
@@ -228,6 +231,9 @@ def _get_cells_from_construction_sets(construction_sets, k_range, basis, shape_a
 
     return cells
 
+def construction_sets_from_basis(basis):
+    return [ ConstructionSet(e, basis.offsets[i]) for (i, e) in enumerate(basis.vecs) ]
+
 def dualgrid_method(basis, k_range, shape_accuracy=4, single_threaded=False):
     """
     de Bruijn dual grid method.
@@ -236,7 +242,7 @@ def dualgrid_method(basis, k_range, shape_accuracy=4, single_threaded=False):
     Returns: cells, possible cell shapes
     """
     # Get each set of parallel planes
-    construction_sets = [ ConstructionSet(e, basis.offsets[i]) for (i, e) in enumerate(basis.vecs) ]
+    construction_sets = construction_sets_from_basis(basis)
 
     # `j_combos` corresponds to a list of construction sets to compare. For a 2D basis of length 3, it would be:
     #   (0, 1), (0, 2), (1, 2)

@@ -26,6 +26,16 @@ Note: Ensure that `main.py` (or your Python file) is being executed from within 
 - `matplotlib`
 - `networkx`
 
+## Testing
+
+To run the tests, run:
+
+```bash
+python -m unittest discover -s tests
+```
+
+This currently checks that no output has changed.
+
 ## Collaboration, making changes:
 
 Please raise an issue if a bug is found, or if a potential new feature should be discussed.
@@ -33,7 +43,7 @@ For making changes to the code, please open a separate branch, following the git
 
 i.e Make a new branch for a new feature: `feature/new_feature`, a bug: `bugfix/name_of_bug`, etc.
 
-Then please open a pull request for review.
+Then please test your changes and open a pull request for review.
 
 ## Notes:
 
